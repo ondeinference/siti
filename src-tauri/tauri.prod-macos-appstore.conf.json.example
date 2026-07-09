@@ -1,0 +1,16 @@
+{
+  "productName": "Siti AI",
+  "version": "1.0.0",
+  "identifier": "ai.siti.Siti",
+  "bundle": {
+    "icon": ["icons/icon.icns"],
+    "macOS": {
+      "bundleVersion": "1.0.0",
+      "entitlements": "./Entitlements-appstore.plist",
+      "signingIdentity": "YOUR_MAC_APP_STORE_DISTRIBUTION_CERT_SHA1",
+      "files": {
+        "embedded.provisionprofile": "/absolute/path/to/your/AppStore_Distribution.provisionprofile"
+      }
+    }
+  }
+}

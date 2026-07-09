@@ -1,0 +1,39 @@
+name: 🐞 Bug report
+description: Something isn't working as expected
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for the report! For **security or privacy** issues, do not use
+        this form — see [SECURITY.md](../blob/main/SECURITY.md).
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: What did you do, what did you expect, and what happened instead?
+      placeholder: Steps to reproduce, expected vs. actual behavior.
+    validations:
+      required: true
+  - type: input
+    id: platform
+    attributes:
+      label: Platform & version
+      placeholder: "macOS 15.1 (Apple silicon) / iOS 18.1 / Android 14 — Siti 1.0.0"
+    validations:
+      required: true
+  - type: input
+    id: model
+    attributes:
+      label: Model in use
+      description: Which on-device model was loaded, if relevant?
+      placeholder: "e.g. Qwen3-4B (GGUF)"
+    validations:
+      required: false
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs / screenshots
+      description: Relevant log output or screenshots. Redact anything private.
+    validations:
+      required: false

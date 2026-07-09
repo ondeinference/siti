@@ -1,0 +1,15 @@
+# smbCloud deploy configuration for the Siti AI landing page (web/).
+#
+# This file intentionally carries only the app *identity*. Everything else —
+# project id, remote path, port, pm2 app name, deployment method, package
+# manager — is stored server-side against the FrontendApp record and fetched by
+# the CLI at deploy time (GET /v1/frontend_apps/{id}/deploy_config), then merged
+# in locally. Keeping infra topology off the public repo is deliberate.
+#
+# Deploy with:  smb deploy   (requires `smb login`)
+
+name = "sitiai"
+
+[project]
+frontend_app_id = "1c28381c-7f8f-4637-822c-e2b31424448c"
+source = "web" # local Next.js app directory to deploy

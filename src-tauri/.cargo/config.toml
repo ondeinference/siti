@@ -1,0 +1,46 @@
+# Force the system (Xcode) C/C++ compilers when building on macOS hosts.
+# This avoids picking up Android NDK toolchains from the shell environment.
+[env]
+CXX = { value = "/usr/bin/clang++", force = true }
+CC = { value = "/usr/bin/clang", force = true }
+MACOSX_DEPLOYMENT_TARGET = { value = "14.0", force = true }
+
+# iOS / tvOS builds of `gemm-f16` require ARM full FP16 support for inline
+# NEON instructions like:
+#   fmul v0.8h, v1.8h, v2.8h
+#   fmla v0.8h, v1.8h, v2.h[0]
+# Without `+fullfp16`, LLVM/Rust rejects those instructions with:
+#   error: instruction requires: fullfp16
+#
+# `+fp16` alone is not sufficient here — `gemm-common` uses arithmetic vector
+# half-precision instructions that specifically require `fullfp16`.
+
+[target.aarch64-apple-darwin]
+rustflags = ["-C", "link-arg=-mmacosx-version-min=14.0"]
+
+[target.x86_64-apple-darwin]
+rustflags = ["-C", "link-arg=-mmacosx-version-min=14.0"]
+
+[target.aarch64-apple-ios]
+rustflags = ["-C", "target-feature=+fullfp16,+fp16"]
+
+[target.aarch64-apple-ios-sim]
+rustflags = ["-C", "target-feature=+fullfp16,+fp16"]
+
+[target.aarch64-apple-tvos]
+rustflags = ["-C", "target-feature=+fullfp16,+fp16"]
+
+[target.aarch64-apple-tvos-sim]
+rustflags = ["-C", "target-feature=+fullfp16,+fp16"]
+
+[target.x86_64-apple-tvos]
+rustflags = ["-C", "target-feature=+fullfp16,+fp16"]
+
+# Android arm64-v8a hits the same `gemm-common` fp16 NEON path as iOS. The
+# aarch64 inline asm (`fmla v0.8h, ...`) requires `fullfp16`, which the default
+# `aarch64-linux-android` target does not enable. gemm still runtime-detects the
+# CPU feature, so enabling it here only allows the instructions to assemble.
+# Only aarch64 needs this; the armv7/x86/x86_64 Android targets never compile
+# the aarch64-gated fp16 SIMD module.
+[target.aarch64-linux-android]
+rustflags = ["-C", "target-feature=+fullfp16,+fp16"]

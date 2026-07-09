@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+    html, body {
+      width: 1080px;
+      height: 1920px;
+      overflow: hidden;
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    }
+
+    .page {
+      width: 1080px;
+      height: 1920px;
+      background: linear-gradient(155deg, #f8f7f3 0%, #eeede9 100%);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    /* ── text section ─────────────────────────────── */
+    .text-section {
+      padding-top: 140px;
+      text-align: center;
+      max-width: 860px;
+      padding-left: 40px;
+      padding-right: 40px;
+    }
+
+    .label {
+      font-size: 27px;
+      font-weight: 700;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: #3a7a56;
+      margin-bottom: 30px;
+    }
+
+    .headline {
+      font-size: 83px;
+      font-weight: 800;
+      line-height: 1.06;
+      color: #1a3428;
+      margin-bottom: 38px;
+    }
+
+    .headline .accent {
+      color: #3a7a56;
+    }
+
+    .subtext {
+      font-size: 33px;
+      font-weight: 400;
+      line-height: 1.45;
+      color: #7a7a7a;
+    }
+
+    /* ── phone frame ──────────────────────────────── */
+    .phone-wrap {
+      margin-top: 66px;
+    }
+
+    .phone-frame {
+      width: 520px;
+      height: 1155px;
+      background: #1c1c1e;
+      border-radius: 56px;
+      padding: 14px;
+      box-shadow:
+        0 0 0 1px rgba(255,255,255,0.06),
+        0 48px 96px rgba(0,0,0,0.30),
+        0 24px 48px rgba(0,0,0,0.16);
+      position: relative;
+    }
+
+    /* side button */
+    .phone-frame::after {
+      content: '';
+      position: absolute;
+      right: -4px;
+      top: 200px;
+      width: 4px;
+      height: 80px;
+      background: #2a2a2c;
+      border-radius: 0 4px 4px 0;
+    }
+
+    .phone-screen {
+      background: #f9f9f9;
+      border-radius: 44px;
+      overflow: hidden;
+      width: 100%;
+      height: 100%;
+      position: relative;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* punch-hole camera */
+    .camera-area {
+      flex-shrink: 0;
+      height: 54px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #f9f9f9;
+    }
+
+    .camera-hole {
+      width: 16px;
+      height: 16px;
+      background: #1c1c1e;
+      border-radius: 50%;
+    }
+
+    /* status bar */
+    .status-bar {
+      flex-shrink: 0;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0 32px 10px;
+      font-size: 22px;
+      font-weight: 700;
+      color: #1a1a1a;
+    }
+
+    .status-icons {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    /* app bar */
+    .app-bar {
+      flex-shrink: 0;
+      padding: 14px 28px 16px;
+      border-bottom: 1.5px solid #ebebeb;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .app-bar-left {}
+
+    .app-title {
+      font-size: 30px;
+      font-weight: 600;
+      color: #111;
+    }
+
+    .app-subtitle {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 4px;
+    }
+
+    .dot {
+      width: 10px;
+      height: 10px;
+      background: #3a7a56;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    .app-subtitle-text {
+      font-size: 19px;
+      color: #8a8a8a;
+    }
+
+    .settings-icon {
+      color: #8a8a8a;
+    }
+
+    /* chat body */
+    .chat-body {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 40px;
+    }
+
+    .chat-icon {
+      width: 56px;
+      height: 56px;
+      margin-bottom: 22px;
+      color: #c8c8c8;
+    }
+
+    .chat-placeholder-title {
+      font-size: 27px;
+      font-weight: 600;
+      color: #1a1a1a;
+      margin-bottom: 10px;
+    }
+
+    .chat-placeholder-sub {
+      font-size: 19px;
+      color: #9a9a9a;
+      text-align: center;
+      line-height: 1.45;
+    }
+
+    /* message bar */
+    .message-bar {
+      flex-shrink: 0;
+      padding: 14px 18px 40px;
+      background: #f9f9f9;
+      border-top: 1.5px solid #ebebeb;
+    }
+
+    .message-input-row {
+      background: #efefef;
+      border-radius: 28px;
+      padding: 16px 16px 16px 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .message-placeholder {
+      font-size: 21px;
+      color: #aaa;
+      flex: 1;
+    }
+
+    .send-btn {
+      width: 42px;
+      height: 42px;
+      background: #d8d8d8;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .hint-row {
+      text-align: center;
+      margin-top: 10px;
+      font-size: 16px;
+      color: #bbb;
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+
+    <div class="text-section">
+      <div class="label">Personal Assistant</div>
+      <div class="headline">
+        An assistant that runs <span class="accent">entirely on your Android.</span>
+      </div>
+      <div class="subtext">No account. No internet required. Just ask — privately.</div>
+    </div>
+
+    <div class="phone-wrap">
+      <div class="phone-frame">
+        <div class="phone-screen">
+
+          <div class="camera-area">
+            <div class="camera-hole"></div>
+          </div>
+
+          <div class="status-bar">
+            <span>9:41</span>
+            <div class="status-icons">
+              <!-- signal -->
+              <svg width="19" height="14" viewBox="0 0 19 14" fill="#1a1a1a">
+                <rect x="0" y="9" width="3.5" height="5" rx="0.8"/>
+                <rect x="4.5" y="6" width="3.5" height="8" rx="0.8"/>
+                <rect x="9" y="3" width="3.5" height="11" rx="0.8"/>
+                <rect x="13.5" y="0" width="3.5" height="14" rx="0.8"/>
+              </svg>
+              <!-- wifi -->
+              <svg width="20" height="15" viewBox="0 0 20 15" fill="#1a1a1a">
+                <circle cx="10" cy="13.5" r="1.5"/>
+                <path d="M6.5 10C7.8 8.8 8.8 8 10 8s2.2.8 3.5 2" stroke="#1a1a1a" stroke-width="1.8" fill="none" stroke-linecap="round"/>
+                <path d="M3.5 7C5.5 5 7.6 4 10 4s4.5 1 6.5 3" stroke="#1a1a1a" stroke-width="1.8" fill="none" stroke-linecap="round"/>
+                <path d="M0.5 4C3.2 1.5 6.4 0 10 0s6.8 1.5 9.5 4" stroke="#1a1a1a" stroke-width="1.8" fill="none" stroke-linecap="round"/>
+              </svg>
+              <!-- battery -->
+              <svg width="27" height="14" viewBox="0 0 27 14" fill="#1a1a1a">
+                <rect x="0" y="1.5" width="22" height="11" rx="3" stroke="#1a1a1a" stroke-width="1.5" fill="none"/>
+                <rect x="22.5" y="4.5" width="3" height="5" rx="1.5"/>
+                <rect x="2" y="3.5" width="16" height="7" rx="1.5"/>
+              </svg>
+            </div>
+          </div>
+
+          <div class="app-bar">
+            <div class="app-bar-left">
+              <div class="app-title">Siti AI</div>
+              <div class="app-subtitle">
+                <div class="dot"></div>
+                <span class="app-subtitle-text">on-device · private</span>
+              </div>
+            </div>
+            <svg class="settings-icon" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#9a9a9a" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="3"/>
+              <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+            </svg>
+          </div>
+
+          <div class="chat-body">
+            <!-- diamond icon like the app -->
+            <svg class="chat-icon" viewBox="0 0 56 56" fill="none" stroke="currentColor" stroke-width="1.4">
+              <rect x="14" y="14" width="28" height="28" rx="2" transform="rotate(45 28 28)"/>
+            </svg>
+            <div class="chat-placeholder-title">How can I help?</div>
+            <div class="chat-placeholder-sub">Your personal assistant, running<br>entirely on your device.</div>
+          </div>
+
+          <div class="message-bar">
+            <div class="message-input-row">
+              <span class="message-placeholder">Message Siti...</span>
+              <div class="send-btn">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#999" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                  <line x1="22" y1="2" x2="11" y2="13"/>
+                  <polygon points="22 2 15 22 11 13 2 9 22 2" fill="#999" stroke="none"/>
+                </svg>
+              </div>
+            </div>
+            <div class="hint-row">Return to send · Shift+Return for new line</div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+  </div>
+</body>
+</html>

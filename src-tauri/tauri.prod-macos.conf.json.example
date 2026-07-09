@@ -1,0 +1,12 @@
+{
+  "productName": "Siti AI",
+  "version": "1.0.0",
+  "identifier": "ai.siti.Siti",
+  "bundle": {
+    "icon": ["icons/icon.icns"],
+    "macOS": {
+      "entitlements": "./Entitlements.plist",
+      "signingIdentity": "YOUR_DEVELOPER_ID_APPLICATION_CERT_SHA1"
+    }
+  }
+}

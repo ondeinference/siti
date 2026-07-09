@@ -1,0 +1,25 @@
+{
+  "name": "@siti/web",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "next dev -p 3034",
+    "build": "next build",
+    "start": "next start -p 3034",
+    "lint": "next lint"
+  },
+  "dependencies": {
+    "next": "^15.5.19",
+    "react": "^19.2.7",
+    "react-dom": "^19.2.7"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4.3.1",
+    "@types/node": "^22.19.21",
+    "@types/react": "^19.2.17",
+    "@types/react-dom": "^19.2.3",
+    "tailwindcss": "^4.3.1",
+    "typescript": "~5.8.3"
+  }
+}

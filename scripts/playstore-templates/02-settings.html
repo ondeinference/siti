@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+    html, body {
+      width: 1080px;
+      height: 1920px;
+      overflow: hidden;
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    }
+
+    .page {
+      width: 1080px;
+      height: 1920px;
+      background: linear-gradient(155deg, #f8f7f3 0%, #eeede9 100%);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    /* ── text section ─────────────────────────────── */
+    .text-section {
+      padding-top: 140px;
+      text-align: center;
+      max-width: 860px;
+      padding-left: 40px;
+      padding-right: 40px;
+    }
+
+    .label {
+      font-size: 27px;
+      font-weight: 700;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: #3a7a56;
+      margin-bottom: 30px;
+    }
+
+    .headline {
+      font-size: 83px;
+      font-weight: 800;
+      line-height: 1.06;
+      color: #1a3428;
+      margin-bottom: 38px;
+    }
+
+    .headline .accent {
+      color: #3a7a56;
+    }
+
+    .subtext {
+      font-size: 33px;
+      font-weight: 400;
+      line-height: 1.45;
+      color: #7a7a7a;
+    }
+
+    /* ── phone frame ──────────────────────────────── */
+    .phone-wrap {
+      margin-top: 66px;
+    }
+
+    .phone-frame {
+      width: 520px;
+      height: 1155px;
+      background: #1c1c1e;
+      border-radius: 56px;
+      padding: 14px;
+      box-shadow:
+        0 0 0 1px rgba(255,255,255,0.06),
+        0 48px 96px rgba(0,0,0,0.30),
+        0 24px 48px rgba(0,0,0,0.16);
+      position: relative;
+    }
+
+    .phone-frame::after {
+      content: '';
+      position: absolute;
+      right: -4px;
+      top: 200px;
+      width: 4px;
+      height: 80px;
+      background: #2a2a2c;
+      border-radius: 0 4px 4px 0;
+    }
+
+    .phone-screen {
+      background: #f2f2f2;
+      border-radius: 44px;
+      overflow: hidden;
+      width: 100%;
+      height: 100%;
+      position: relative;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .camera-area {
+      flex-shrink: 0;
+      height: 54px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #f2f2f2;
+    }
+
+    .camera-hole {
+      width: 16px;
+      height: 16px;
+      background: #1c1c1e;
+      border-radius: 50%;
+    }
+
+    .status-bar {
+      flex-shrink: 0;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0 32px 10px;
+      font-size: 22px;
+      font-weight: 700;
+      color: #1a1a1a;
+    }
+
+    .status-icons {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    /* settings screen */
+    .settings-screen {
+      flex: 1;
+      background: #f2f2f2;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .settings-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 18px 28px 20px;
+      background: #f2f2f2;
+    }
+
+    .settings-title {
+      font-size: 34px;
+      font-weight: 700;
+      color: #111;
+    }
+
+    .done-btn {
+      font-size: 24px;
+      font-weight: 600;
+      color: #3a7a56;
+    }
+
+    /* settings list */
+    .settings-group {
+      margin: 0 18px 10px;
+    }
+
+    .settings-group-label {
+      font-size: 17px;
+      font-weight: 600;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: #8a8a8a;
+      padding: 8px 16px 8px;
+    }
+
+    .settings-card {
+      background: #fff;
+      border-radius: 16px;
+      overflow: hidden;
+    }
+
+    .settings-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 18px 20px;
+      border-bottom: 1px solid #f0f0f0;
+    }
+
+    .settings-row:last-child {
+      border-bottom: none;
+    }
+
+    .settings-row-label {
+      font-size: 22px;
+      font-weight: 500;
+      color: #111;
+    }
+
+    .settings-row-value {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 21px;
+      color: #8a8a8a;
+      max-width: 240px;
+      text-align: right;
+    }
+
+    .chevron {
+      color: #c0c0c0;
+      flex-shrink: 0;
+    }
+
+    /* model detail block */
+    .model-detail {
+      background: #fff;
+      border-radius: 16px;
+      margin: 0 18px 10px;
+      padding: 18px 20px;
+    }
+
+    .model-name {
+      font-size: 22px;
+      font-weight: 600;
+      color: #111;
+      margin-bottom: 4px;
+    }
+
+    .model-maker {
+      font-size: 18px;
+      color: #8a8a8a;
+      margin-bottom: 12px;
+    }
+
+    .model-desc {
+      font-size: 19px;
+      color: #555;
+      line-height: 1.45;
+      margin-bottom: 16px;
+    }
+
+    .model-status {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .status-dot {
+      width: 9px;
+      height: 9px;
+      background: #c0c0c0;
+      border-radius: 50%;
+    }
+
+    .status-text {
+      font-size: 19px;
+      color: #8a8a8a;
+    }
+
+    .download-note {
+      margin: 0 18px 10px;
+      padding: 16px 20px;
+      font-size: 18px;
+      color: #8a8a8a;
+      line-height: 1.45;
+    }
+
+    .about-group {
+      margin: 0 18px;
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+
+    <div class="text-section">
+      <div class="label">On-Device Models</div>
+      <div class="headline">
+        Pick your model. <span class="accent">Keep your data.</span>
+      </div>
+      <div class="subtext">Run open models like Qwen 2.5 — everything stays on your device.</div>
+    </div>
+
+    <div class="phone-wrap">
+      <div class="phone-frame">
+        <div class="phone-screen">
+
+          <div class="camera-area">
+            <div class="camera-hole"></div>
+          </div>
+
+          <div class="status-bar">
+            <span>9:41</span>
+            <div class="status-icons">
+              <svg width="19" height="14" viewBox="0 0 19 14" fill="#1a1a1a">
+                <rect x="0" y="9" width="3.5" height="5" rx="0.8"/>
+                <rect x="4.5" y="6" width="3.5" height="8" rx="0.8"/>
+                <rect x="9" y="3" width="3.5" height="11" rx="0.8"/>
+                <rect x="13.5" y="0" width="3.5" height="14" rx="0.8"/>
+              </svg>
+              <svg width="20" height="15" viewBox="0 0 20 15" fill="#1a1a1a">
+                <circle cx="10" cy="13.5" r="1.5"/>
+                <path d="M6.5 10C7.8 8.8 8.8 8 10 8s2.2.8 3.5 2" stroke="#1a1a1a" stroke-width="1.8" fill="none" stroke-linecap="round"/>
+                <path d="M3.5 7C5.5 5 7.6 4 10 4s4.5 1 6.5 3" stroke="#1a1a1a" stroke-width="1.8" fill="none" stroke-linecap="round"/>
+                <path d="M0.5 4C3.2 1.5 6.4 0 10 0s6.8 1.5 9.5 4" stroke="#1a1a1a" stroke-width="1.8" fill="none" stroke-linecap="round"/>
+              </svg>
+              <svg width="27" height="14" viewBox="0 0 27 14" fill="#1a1a1a">
+                <rect x="0" y="1.5" width="22" height="11" rx="3" stroke="#1a1a1a" stroke-width="1.5" fill="none"/>
+                <rect x="22.5" y="4.5" width="3" height="5" rx="1.5"/>
+                <rect x="2" y="3.5" width="16" height="7" rx="1.5"/>
+              </svg>
+            </div>
+          </div>
+
+          <div class="settings-screen">
+            <div class="settings-header">
+              <div class="settings-title">Settings</div>
+              <div class="done-btn">Done</div>
+            </div>
+
+            <div class="settings-group">
+              <div class="settings-group-label">Model</div>
+              <div class="settings-card">
+                <div class="settings-row">
+                  <span class="settings-row-label">On-device model</span>
+                  <div class="settings-row-value">
+                    <span>Qwen 2.5 1.5B (GGUF)…</span>
+                    <svg class="chevron" width="12" height="20" viewBox="0 0 12 20" fill="none" stroke="#c0c0c0" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                      <polyline points="1 1 11 10 1 19"/>
+                    </svg>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="model-detail">
+              <div class="model-name">Qwen 2.5 1.5B (GGUF)</div>
+              <div class="model-maker">Qwen / Alibaba</div>
+              <div class="model-desc">Lightest pre-quantized chat model — ideal for iOS &amp; Android (~941 MB). Fits comfortably within device memory limits.</div>
+              <div class="model-status">
+                <div class="status-dot"></div>
+                <span class="status-text">Not loaded</span>
+              </div>
+            </div>
+
+            <div class="download-note">
+              Switching downloads the model on first use — Wi-Fi recommended. Everything runs entirely on your device; nothing is ever sent to a server.
+            </div>
+
+            <div class="about-group">
+              <div class="settings-group-label">About</div>
+              <div class="settings-card">
+                <div class="settings-row">
+                  <span class="settings-row-label">Siti AI</span>
+                  <div class="settings-row-value"><span>1.0.0</span></div>
+                </div>
+                <div class="settings-row">
+                  <span class="settings-row-label">Privacy</span>
+                  <div class="settings-row-value"><span>On-device · private</span></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+  </div>
+</body>
+</html>

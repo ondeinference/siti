@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <!-- viewport-fit=cover makes the WebView edge-to-edge so the theme colour
+         (painted on html/body) extends behind the status bar and home
+         indicator, and env(safe-area-inset-*) becomes available for insetting
+         content. -->
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, viewport-fit=cover"
+    />
+    <!-- Let the WebView and its default backdrop follow the system theme. -->
+    <meta name="color-scheme" content="light dark" />
+    <meta
+      name="theme-color"
+      content="#fafafa"
+      media="(prefers-color-scheme: light)"
+    />
+    <meta
+      name="theme-color"
+      content="#111111"
+      media="(prefers-color-scheme: dark)"
+    />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="Siti AI" />
+    <title>Siti AI</title>
+  </head>
+
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

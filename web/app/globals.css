@@ -1,0 +1,92 @@
+@import "tailwindcss";
+
+/* ── Design system, ported from the app (src/App.css) ─────────────────────── */
+:root {
+  --bg: #fafafa;
+  --surface: #ffffff;
+  --border: #e8e8e8;
+  --text-primary: #1a1a1a;
+  --text-secondary: #8a8a8a;
+  --accent: #2d2d2d;
+  --accent-hover: #1a1a1a;
+
+  /* Brand green, matching the App Store screenshots and the app's "ready" state */
+  --brand: #06a561;
+  --brand-soft: rgba(6, 165, 97, 0.1);
+
+  --radius: 18px;
+  --radius-sm: 8px;
+
+  --font-sans: var(--font-inter), "Inter", -apple-system, BlinkMacSystemFont,
+    "Segoe UI", sans-serif;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #111111;
+    --surface: #1c1c1c;
+    --border: #2a2a2a;
+    --text-primary: #f0f0f0;
+    --text-secondary: #666666;
+    --accent: #e0e0e0;
+    --accent-hover: #ffffff;
+    --brand: #34c759;
+    --brand-soft: rgba(52, 199, 89, 0.12);
+  }
+}
+
+/* Expose the tokens to Tailwind utilities (bg-bg, text-ink, text-brand, …) */
+@theme inline {
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-border: var(--border);
+  --color-ink: var(--text-primary);
+  --color-muted: var(--text-secondary);
+  --color-accent: var(--accent);
+  --color-accent-hover: var(--accent-hover);
+  --color-brand: var(--brand);
+  --radius-card: var(--radius);
+  --radius-sm: var(--radius-sm);
+  --font-sans: var(--font-sans);
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text-primary);
+  font-family: var(--font-sans);
+  font-size: 15px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Legal / long-form pages */
+.prose-legal h2 {
+  font-size: 1.25rem;
+  font-weight: 600;
+  letter-spacing: -0.2px;
+  color: var(--text-primary);
+  margin-top: 2rem;
+  margin-bottom: 0.75rem;
+}
+
+.prose-legal p,
+.prose-legal li {
+  color: var(--text-secondary);
+  line-height: 1.7;
+  margin-bottom: 0.75rem;
+}
+
+.prose-legal ul {
+  list-style: disc;
+  padding-left: 1.25rem;
+}

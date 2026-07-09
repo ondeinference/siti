@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+    html, body {
+      width: 1024px;
+      height: 500px;
+      overflow: hidden;
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    }
+
+    .page {
+      width: 1024px;
+      height: 500px;
+      background: linear-gradient(145deg, #f8f7f3 0%, #eeede9 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 80px;
+      padding: 0 80px;
+    }
+
+    /* app icon */
+    .icon-wrap {
+      flex-shrink: 0;
+    }
+
+    .app-icon {
+      width: 160px;
+      height: 160px;
+      background: #1c1c1e;
+      border-radius: 36px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow:
+        0 20px 48px rgba(0,0,0,0.22),
+        0 8px 20px rgba(0,0,0,0.14);
+    }
+
+    .app-icon-text {
+      font-size: 62px;
+      font-weight: 700;
+      color: #ffffff;
+      letter-spacing: -0.02em;
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    }
+
+    /* text content */
+    .content {
+      flex: 1;
+    }
+
+    .brand {
+      font-size: 26px;
+      font-weight: 700;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: #3a7a56;
+      margin-bottom: 20px;
+    }
+
+    .headline {
+      font-size: 66px;
+      font-weight: 800;
+      line-height: 1.06;
+      color: #1a3428;
+      margin-bottom: 24px;
+    }
+
+    .headline .accent {
+      color: #3a7a56;
+    }
+
+    .pills {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    .pill {
+      background: rgba(58, 122, 86, 0.10);
+      border: 1.5px solid rgba(58, 122, 86, 0.20);
+      color: #2d6645;
+      border-radius: 100px;
+      padding: 8px 20px;
+      font-size: 20px;
+      font-weight: 600;
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+
+    <div class="icon-wrap">
+      <div class="app-icon">
+        <span class="app-icon-text">Siti</span>
+      </div>
+    </div>
+
+    <div class="content">
+      <div class="brand">Siti AI</div>
+      <div class="headline">
+        Private AI,<br><span class="accent">on your device.</span>
+      </div>
+      <div class="pills">
+        <div class="pill">No account</div>
+        <div class="pill">No internet needed</div>
+        <div class="pill">No tracking</div>
+      </div>
+    </div>
+
+  </div>
+</body>
+</html>

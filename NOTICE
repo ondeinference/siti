@@ -1,0 +1,18 @@
+Siti AI
+Copyright 2026 Splitfire AB
+
+This product is licensed under the Apache License, Version 2.0 (see LICENSE).
+
+The "Siti AI" name and the Siti logos and app icons are trademarks of
+Splitfire AB and are NOT licensed under Apache-2.0. See TRADEMARK.md for the
+brand-use policy.
+
+Siti AI runs on Onde, an on-device inference engine by Splitfire AB, published
+separately under MIT OR Apache-2.0:
+    https://github.com/ondeinference/onde
+    https://crates.io/crates/onde
+
+This software depends on third-party open-source components (Tauri, React,
+mistralrs, candle, and others). Their licenses and copyright notices are
+retained in the respective dependency manifests (Cargo.toml, package.json) and
+lockfiles.
