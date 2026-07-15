@@ -60,7 +60,7 @@ pub async fn chat_send_message(app: AppHandle, message: String) -> Result<(), St
     let history_len = ENGINE.history().await.len();
     info!(
         "Chat inference DISPATCH history_turns={} message=\"{}\"",
-        history_len, &message
+        history_len, message
     );
 
     tokio::task::spawn(async move {

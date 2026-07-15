@@ -7,7 +7,7 @@ use log::debug;
 use objc2_foundation::ns_string;
 #[cfg(any(target_os = "ios", target_os = "macos"))]
 use objc2_foundation::NSFileManager;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use tauri::{App, Manager};
 
 /// Application filesystem setup.
@@ -20,7 +20,7 @@ use tauri::{App, Manager};
 /// 1. `HF_HOME`      → controls where `hf-hub` stores downloaded models
 /// 2. `HF_HUB_CACHE` → explicit cache dir read by some mistral.rs code paths
 /// 3. `TMPDIR`       → controls where `std::env::temp_dir()` points;
-///                      mistral.rs writes Metal `.metallib` files there
+///    mistral.rs writes Metal `.metallib` files there
 ///
 /// The Apple App Group container (`group.com.ondeinference.apps`) is used as the
 /// base directory so that models are shared across all apps in the group,
@@ -83,7 +83,7 @@ pub fn setup_application_filesystem(app: &App) -> Result<(), Box<dyn std::error:
 ///
 /// Using the App Group container means the model cache is shared across all
 /// apps in the `group.com.ondeinference.apps` group, avoiding duplicate downloads.
-fn setup_hf_home(container_dir: &PathBuf) -> Result<(), Box<dyn std::error::Error>> {
+fn setup_hf_home(container_dir: &Path) -> Result<(), Box<dyn std::error::Error>> {
     let models_home = container_dir.join("models");
     let model_hub = models_home.join("hub");
 
@@ -128,7 +128,7 @@ fn setup_hf_home(container_dir: &PathBuf) -> Result<(), Box<dyn std::error::Erro
 ///
 /// On non-sandboxed macOS this is harmless; the system temp directory is
 /// always writable, and if `TMPDIR` is already set we leave it alone.
-fn setup_tmpdir(container_dir: &PathBuf) -> Result<(), Box<dyn std::error::Error>> {
+fn setup_tmpdir(container_dir: &Path) -> Result<(), Box<dyn std::error::Error>> {
     // Check whether the current temp_dir is actually writable.
     let current_tmp = std::env::temp_dir();
     let probe_file = current_tmp.join(".siti_tmp_probe");
