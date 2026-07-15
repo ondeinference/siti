@@ -182,10 +182,7 @@ pub(crate) fn config_for_model_id(id: &str) -> Option<GgufModelConfig> {
 /// platform default if the selection is somehow unknown).
 #[cfg(any(target_os = "macos", target_os = "ios", target_os = "android"))]
 pub(crate) fn model_config() -> GgufModelConfig {
-    let id = SELECTED_MODEL
-        .lock()
-        .map(|g| g.clone())
-        .unwrap_or_default();
+    let id = SELECTED_MODEL.lock().map(|g| g.clone()).unwrap_or_default();
     config_for_model_id(&id).unwrap_or_else(siti_default_config)
 }
 
@@ -198,10 +195,7 @@ pub(crate) fn model_config() -> GgufModelConfig {
 /// a budget yields empty replies.
 #[cfg(any(target_os = "macos", target_os = "ios", target_os = "android"))]
 pub(crate) fn sampling_config() -> SamplingConfig {
-    let id = SELECTED_MODEL
-        .lock()
-        .map(|g| g.clone())
-        .unwrap_or_default();
+    let id = SELECTED_MODEL.lock().map(|g| g.clone()).unwrap_or_default();
     let is_qwen3 = id.contains("Qwen3") || id.contains("Qwen_Qwen3");
     let mobile = cfg!(any(target_os = "ios", target_os = "android"));
 
