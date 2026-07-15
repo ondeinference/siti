@@ -1,6 +1,11 @@
 packages:
   - "web"
 
+allowBuilds:
+  esbuild: true
+  puppeteer: true
+  sharp: true
+
 onlyBuiltDependencies:
   - esbuild
   - "@tailwindcss/oxide"
