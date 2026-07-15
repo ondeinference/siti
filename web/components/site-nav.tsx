@@ -1,6 +1,9 @@
 import Link from "next/link";
 
-const links = [{ href: "/about", label: "About" }];
+const links = [
+  { href: "/about", label: "About" },
+  { href: "https://github.com/ondeinference/siti", label: "GitHub", external: true },
+];
 
 export function SiteNav() {
   return (
@@ -15,12 +18,23 @@ export function SiteNav() {
         <ul className="flex items-center gap-6 text-sm text-muted">
           {links.map((link) => (
             <li key={link.href}>
-              <Link
-                href={link.href}
-                className="transition-colors hover:text-ink"
-              >
-                {link.label}
-              </Link>
+              {link.external ? (
+                <a
+                  href={link.href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="transition-colors hover:text-ink"
+                >
+                  {link.label}
+                </a>
+              ) : (
+                <Link
+                  href={link.href}
+                  className="transition-colors hover:text-ink"
+                >
+                  {link.label}
+                </Link>
+              )}
             </li>
           ))}
         </ul>
