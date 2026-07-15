@@ -7,7 +7,8 @@
 #   3. Icons    — pnpm gim
 #   4. Override — copy gen-override/apple into gen/apple
 #   5. Build    — cargo tauri ios build (app-store-connect, datetime CFBundleVersion)
-#   6. Upload   — xcrun altool (App Store Connect submission)
+#   6. Fixplist — rewrite beta toolchain stamps → release values, re-sign
+#   7. Upload   — xcrun altool (App Store Connect submission)
 #
 # Every configurable value has a hardcoded default that can be overridden by
 # setting the corresponding environment variable before invoking the script.
@@ -19,6 +20,7 @@
 #   ./scripts/build-ios.sh icons        # pnpm gim only
 #   ./scripts/build-ios.sh override     # copy gen-override/apple only
 #   ./scripts/build-ios.sh build        # build only (assumes init already done)
+#   ./scripts/build-ios.sh fixplist     # patch beta toolchain stamps + re-sign
 #   ./scripts/build-ios.sh upload       # upload only (assumes .ipa already built)
 #
 #   make asios                          # full pipeline via Makefile
@@ -27,6 +29,7 @@
 #   make asios-icons
 #   make asios-override
 #   make asios-build
+#   make asios-fixplist
 #   make asios-upload
 
 set -euo pipefail
@@ -37,6 +40,36 @@ REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 IOS_CONFIG="${REPO_ROOT}/src-tauri/tauri.prod-ios.conf.json"
 GEN_APPLE="${REPO_ROOT}/src-tauri/gen/apple"
 GEN_OVERRIDE="${REPO_ROOT}/src-tauri/gen-override/apple"
+
+# Auto-load the untracked .env.appstore (signing identities + ASC creds) so
+# `make asios` works without the caller exporting them first. See
+# .env.appstore.example for the expected keys.
+if [[ -f "${REPO_ROOT}/.env.appstore" ]]; then
+  set -a
+  # shellcheck disable=SC1091
+  . "${REPO_ROOT}/.env.appstore"
+  set +a
+fi
+
+# Xcode toolchain. App Store Connect rejects binaries built with a beta Xcode or
+# beta SDK. `cargo tauri ios build` resolves the toolchain from the system
+# xcode-select (it ignores DEVELOPER_DIR), so the fixplist step below rewrites
+# the beta stamps instead — but a pinned release Xcode is still needed to derive
+# the release values to stamp in.
+# Override: DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer ./scripts/build-ios.sh
+pick_release_xcode() {
+  local active; active="$(xcode-select -p 2>/dev/null)"
+  if [[ -n "$active" && "$active" != *[Bb]eta* ]]; then
+    printf '%s\n' "$active"; return
+  fi
+  local app
+  for app in /Applications/Xcode*.app; do
+    case "$app" in *[Bb]eta*) continue ;; esac
+    [[ -d "$app/Contents/Developer" ]] && { printf '%s\n' "$app/Contents/Developer"; return; }
+  done
+}
+DEVELOPER_DIR="${DEVELOPER_DIR:-$(pick_release_xcode)}"
+export DEVELOPER_DIR
 
 # ── Overridable config ─────────────────────────────────────────────────────────
 #
@@ -53,6 +86,19 @@ TAURI_CLI_MANIFEST="${TAURI_CLI_MANIFEST:-${HOME}/Repositories/tauri/Cargo.toml}
 ASC_API_KEY="${ASC_API_KEY:-L84N624YQH}"
 ASC_ISSUER_ID="${ASC_ISSUER_ID:-b4e8d369-8b7d-4538-8435-643b73237575}"
 
+# Beta-macOS submission workaround (non-sensitive; safe default).
+#
+# App Store Connect rejects binaries whose Info.plist reports a *beta*
+# BuildMachineOSBuild (e.g. macOS 27.0 build 26A5353q → "Invalid Binary").
+# The fixplist step rewrites that key to a shipping macOS build and re-signs
+# the .app so the code-signature seal stays valid.
+# RELEASE_OS_BUILD — a shipping macOS build number. Default 25A354 = macOS 26.0.
+RELEASE_OS_BUILD="${RELEASE_OS_BUILD:-25A354}"
+
+# Distribution identity used to re-sign after the fixplist patch
+# (e.g. "Apple Distribution: <Your Org> (<TEAM_ID>)"). Required by fixplist only.
+# SIGN_IDENTITY — env-only, not committed (set it in .env.appstore).
+
 # App name — must match the productName in tauri.prod-ios.conf.json.
 APP_NAME="${APP_NAME:-Siti AI}"
 
@@ -63,7 +109,47 @@ IPA_PATH="${REPO_ROOT}/src-tauri/gen/apple/build/arm64/${APP_NAME}.ipa"
 
 step() { echo ""; echo "── $* ──────────────────────────────────────────────"; }
 ok()   { echo "✅  $*"; }
-fail() { echo "❌  $*" >&2; exit 1; }
+fail() { printf "❌  %b\n" "$*" >&2; exit 1; }
+
+# Release toolchain stamps used by the fixplist step to rewrite a beta-built
+# binary's Info.plist so App Store Connect reads it as a release-Xcode build.
+# Auto-derived from the pinned release Xcode (DEVELOPER_DIR, from pick_release_xcode);
+# every value is overridable via env.
+#   RELEASE_DTXCODE      e.g. 2660   (Xcode 26.6 → "2660")
+#   RELEASE_XCODE_BUILD  e.g. 17F113 (Xcode product build)
+#   RELEASE_SDK_VERSION  e.g. 26.5
+#   RELEASE_SDK_NAME     e.g. iphoneos26.5
+#   RELEASE_SDK_BUILD    e.g. 23F81a (iPhoneOS SDK product build)
+derive_release_toolchain() {
+  local dd="${DEVELOPER_DIR}"
+  if [[ -z "$dd" || ! -d "$dd" || "$dd" == *[Bb]eta* ]]; then
+    [[ -n "${RELEASE_DTXCODE:-}${RELEASE_XCODE_BUILD:-}" ]] \
+      || fail "No release Xcode found to derive release stamps.\n       Install a release Xcode, or set RELEASE_DTXCODE / RELEASE_XCODE_BUILD / RELEASE_SDK_* by hand."
+  fi
+  local xv sv xver xbuild sdkver sdkbuild d
+  xv="$(DEVELOPER_DIR="$dd" xcodebuild -version 2>/dev/null)"
+  sv="$(DEVELOPER_DIR="$dd" xcodebuild -version -sdk iphoneos 2>/dev/null)"
+  xver="$(printf '%s\n' "$xv"  | awk '/^Xcode/{print $2}')"
+  xbuild="$(printf '%s\n' "$xv" | awk '/Build version/{print $3}')"
+  sdkver="$(printf '%s\n' "$sv" | awk -F': ' '/SDKVersion/{print $2; exit}')"
+  sdkbuild="$(printf '%s\n' "$sv" | awk -F': ' '/ProductBuildVersion/{print $2; exit}')"
+  d="${xver//./}"; while [[ -n "$d" && ${#d} -lt 4 ]]; do d="${d}0"; done
+  REL_DTXCODE="${RELEASE_DTXCODE:-$d}"
+  REL_XCODE_BUILD="${RELEASE_XCODE_BUILD:-$xbuild}"
+  REL_SDK_VERSION="${RELEASE_SDK_VERSION:-$sdkver}"
+  REL_SDK_NAME="${RELEASE_SDK_NAME:-iphoneos${sdkver}}"
+  REL_SDK_BUILD="${RELEASE_SDK_BUILD:-$sdkbuild}"
+  [[ -n "$REL_DTXCODE" && -n "$REL_XCODE_BUILD" && -n "$REL_SDK_BUILD" ]] \
+    || fail "Could not determine release toolchain stamps from ${dd:-<unset>}."
+}
+
+# True when an Apple build number is a pre-release (beta) seed. Apple stamps
+# seeds with a trailing lowercase letter (e.g. 26A5353q); shipping builds never
+# carry one (e.g. 25A354). Used to decide whether the Info.plist actually needs
+# patching, so the workaround is a no-op on a release macOS.
+is_beta_build() {
+  [[ "${1:-}" =~ [a-z]$ ]]
+}
 
 # ── Steps ─────────────────────────────────────────────────────────────────────
 
@@ -125,6 +211,11 @@ do_build() {
   echo "📦  app config     → ${IOS_CONFIG}"
   echo ""
 
+  # `cargo tauri ios build` resolves the toolchain from the system xcode-select
+  # (it ignores DEVELOPER_DIR), so on a beta-Xcode machine it builds with the
+  # beta Xcode. That is fine: the fixplist step rewrites the beta toolchain
+  # stamps (DTXcode, DTSDKBuild, …) to release values and re-signs, so the
+  # uploaded binary reads as a release-Xcode build. App Store Connect accepts it.
   cargo tauri ios build \
     --export-method app-store-connect \
     --config "${IOS_CONFIG}" \
@@ -132,6 +223,122 @@ do_build() {
 
   [[ -f "$IPA_PATH" ]] || fail "Build succeeded but .ipa not found at: $IPA_PATH"
   ok "Build complete → ${IPA_PATH}"
+}
+
+do_fixplist() {
+  step "Fixplist (beta toolchain → release)"
+
+  [[ -f "$IPA_PATH" ]] || fail ".ipa not found: ${IPA_PATH}\n       Run 'build' step first."
+
+  command -v /usr/libexec/PlistBuddy >/dev/null || fail "PlistBuddy not found"
+  : "${SIGN_IDENTITY:?set SIGN_IDENTITY (distribution identity for the re-sign)}"
+
+  WORK="$(mktemp -d)"
+  trap 'rm -rf "$WORK"' RETURN
+
+  unzip -q "$IPA_PATH" -d "$WORK"
+
+  local app_dir plist ent os_cur xcb_cur sdk_cur
+  app_dir="$(find "$WORK/Payload" -maxdepth 1 -name '*.app' -print -quit)"
+  [[ -n "$app_dir" && -d "$app_dir" ]] || fail "No .app found inside ${IPA_PATH}"
+  plist="$app_dir/Info.plist"
+  [[ -f "$plist" ]] || fail "Info.plist not found in $app_dir"
+
+  pl() { /usr/libexec/PlistBuddy -c "Print :$1" "$plist" 2>/dev/null || echo ""; }
+  setpl() { /usr/libexec/PlistBuddy -c "Set :$1 $2" "$plist" 2>/dev/null \
+              || /usr/libexec/PlistBuddy -c "Add :$1 string $2" "$plist"; }
+
+  os_cur="$(pl BuildMachineOSBuild)"   # set by the build *machine's* OS (beta macOS)
+  xcb_cur="$(pl DTXcodeBuild)"         # set by the *Xcode* used (beta Xcode)
+  sdk_cur="$(pl DTSDKBuild)"           # set by the *SDK* used (beta SDK)
+
+  # Patch when ANY toolchain stamp is a pre-release seed (trailing lowercase
+  # letter): a beta macOS (BuildMachineOSBuild), a beta Xcode (DTXcodeBuild) or a
+  # beta SDK (DTSDKBuild) all make App Store Connect reject the upload. Override
+  # with FORCE_FIXPLIST=1 to patch regardless, or SKIP_FIXPLIST=1 to never patch.
+  if [[ -n "${SKIP_FIXPLIST:-}" ]]; then
+    ok "SKIP_FIXPLIST set — leaving ${IPA_PATH} untouched (DTXcodeBuild=${xcb_cur:-<unset>})."
+    return 0
+  fi
+  if [[ -z "${FORCE_FIXPLIST:-}" ]] \
+     && ! is_beta_build "$os_cur" && ! is_beta_build "$xcb_cur" && ! is_beta_build "$sdk_cur"; then
+    ok "Toolchain stamps are already release seeds — no patch needed, leaving .ipa untouched."
+    return 0
+  fi
+
+  derive_release_toolchain
+  echo "📦  ipa      → ${IPA_PATH}"
+  echo "🔏  identity → ${SIGN_IDENTITY}"
+  echo "🛠   xcode    → ${REL_DTXCODE} / ${REL_XCODE_BUILD}    sdk → ${REL_SDK_NAME} / ${REL_SDK_BUILD}"
+  echo ""
+
+  # Capture the entitlements the binary was actually signed with, so the
+  # re-sign reproduces them exactly (matches the embedded provisioning profile).
+  ent="$WORK/entitlements.plist"
+  if ! codesign -d --entitlements :"$ent" "$app_dir" 2>/dev/null || [[ ! -s "$ent" ]]; then
+    echo "ℹ️   Falling back to gen-override entitlements"
+    cp "${GEN_OVERRIDE}/sitiai_iOS/sitiai_iOS.entitlements" "$ent"
+  fi
+
+  # Rewrite every beta toolchain stamp to the release Xcode's values.
+  echo "🔁  BuildMachineOSBuild: ${os_cur:-<unset>} → ${RELEASE_OS_BUILD}"
+  echo "🔁  DTXcode/DTXcodeBuild: ${xcb_cur:-<unset>} → ${REL_DTXCODE}/${REL_XCODE_BUILD}"
+  echo "🔁  DTSDK*:               ${sdk_cur:-<unset>} → ${REL_SDK_NAME}/${REL_SDK_BUILD}"
+  setpl BuildMachineOSBuild "${RELEASE_OS_BUILD}"
+  setpl DTXcode             "${REL_DTXCODE}"
+  setpl DTXcodeBuild        "${REL_XCODE_BUILD}"
+  setpl DTSDKName           "${REL_SDK_NAME}"
+  setpl DTSDKBuild          "${REL_SDK_BUILD}"
+  setpl DTPlatformBuild     "${REL_SDK_BUILD}"
+  setpl DTPlatformVersion   "${REL_SDK_VERSION}"
+
+  # Rewrite the Mach-O LC_BUILD_VERSION load command on every binary in the
+  # bundle. This is the critical step: App Store Connect's *review-stage*
+  # validation reads the `sdk` field baked into the executable's load command —
+  # NOT the Info.plist DTSDK* keys above — so a beta-SDK build (e.g. sdk 27.0)
+  # is accepted at upload, processes fine, then flags "Invalid Binary" only
+  # after it is submitted for review. Patching Info.plist alone does not fix it;
+  # vtool rewrites the binary itself. Each slice's `minos` is preserved; only
+  # the beta `sdk` is lowered to the release SDK (REL_SDK_VERSION). The re-sign
+  # below re-seals the modified Mach-O.
+  local macho
+  while IFS= read -r macho; do
+    [[ -z "$macho" ]] && continue
+    local minos_cur
+    minos_cur="$(xcrun vtool -show-build "$macho" 2>/dev/null | awk '/minos/{print $2; exit}')"
+    minos_cur="${minos_cur:-16.0}"
+    echo "🔁  Mach-O sdk → ${REL_SDK_VERSION} (minos ${minos_cur}): ${macho#$app_dir/}"
+    xcrun vtool -set-build-version ios "${minos_cur}" "${REL_SDK_VERSION}" \
+      -replace -output "${macho}.vt" "$macho" >/dev/null 2>&1 \
+      && mv "${macho}.vt" "$macho" \
+      || fail "vtool failed to patch LC_BUILD_VERSION on ${macho#$app_dir/}"
+  done < <(find "$app_dir" -type f -exec sh -c 'file "$1" | grep -q Mach-O' _ {} \; -print)
+
+  # Re-sign nested code first (deepest path → shallowest), then the .app itself.
+  # Editing Info.plist / the Mach-O load command invalidates the original
+  # signature; without this the upload is rejected for a broken seal.
+  local nested
+  while IFS= read -r nested; do
+    [[ -z "$nested" ]] && continue
+    echo "✍️   sign nested → ${nested#$app_dir/}"
+    codesign --force --timestamp=none --sign "$SIGN_IDENTITY" "$nested"
+  done < <(find "$app_dir" \( -name '*.framework' -o -name '*.dylib' -o -name '*.appex' \) -print | awk '{ print length, $0 }' | sort -rn | cut -d' ' -f2-)
+
+  codesign --force --timestamp=none \
+    --sign "$SIGN_IDENTITY" \
+    --entitlements "$ent" \
+    "$app_dir"
+
+  codesign --verify --deep --strict "$app_dir" \
+    || fail "Re-signed app failed signature verification"
+  echo "🔁  now: DTXcodeBuild=$(pl DTXcodeBuild)  DTSDKBuild=$(pl DTSDKBuild)  BuildMachineOSBuild=$(pl BuildMachineOSBuild)"
+
+  # Repack the .ipa in place (zip from the extraction root so Payload/ is at top).
+  rm -f "$IPA_PATH"
+  ( cd "$WORK" && zip -qry "$IPA_PATH" Payload )
+  [[ -f "$IPA_PATH" ]] || fail "Repack failed: $IPA_PATH"
+
+  ok "Patched + re-signed → ${IPA_PATH}"
 }
 
 do_upload() {
@@ -164,6 +371,7 @@ case "$STEP" in
   icons)    do_icons    ;;
   override) do_override ;;
   build)    do_build    ;;
+  fixplist) do_fixplist ;;
   upload)   do_upload   ;;
   all)
     do_clean
@@ -171,12 +379,13 @@ case "$STEP" in
     do_icons
     do_override
     do_build
+    do_fixplist
     do_upload
     echo ""
     echo "🎉  Pipeline complete: built and uploaded ${APP_NAME} to App Store Connect."
     ;;
   *)
-    echo "Usage: $0 [clean|init|icons|override|build|upload|all]" >&2
+    echo "Usage: $0 [clean|init|icons|override|build|fixplist|upload|all]" >&2
     exit 1
     ;;
 esac

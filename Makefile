@@ -7,12 +7,13 @@
 # make asmacos-upload  — upload the .pkg to App Store Connect
 #
 # ── iOS App Store ──────────────────────────────────────────────────────────
-# make asios              — full pipeline: clean → init → icons → override → build → upload
+# make asios              — full pipeline: clean → init → icons → override → build → fixplist → upload
 # make asios-clean        — rm -rf src-tauri/gen/apple
 # make asios-init         — cargo tauri ios init
 # make asios-icons        — pnpm gim
 # make asios-override     — copy gen-override/apple into gen/apple
 # make asios-build        — cargo tauri ios build
+# make asios-fixplist     — rewrite beta toolchain stamps (Info.plist + Mach-O) to release values, re-sign
 # make asios-upload       — xcrun altool upload
 #
 # ── Android Play Store ─────────────────────────────────────────────────────
@@ -34,7 +35,7 @@
 
 .PHONY: dev build \
         asmacos asmacos-build asmacos-sign asmacos-upload \
-        asios asios-clean asios-init asios-icons asios-override asios-build asios-upload \
+        asios asios-clean asios-init asios-icons asios-override asios-build asios-fixplist asios-upload \
         psmobile psmobile-clean psmobile-init psmobile-icons psmobile-override psmobile-keystore psmobile-build psmobile-open \
         web-dev web-build web-deploy \
         fmt lint clean
@@ -72,6 +73,9 @@ asios-override:
 
 asios-build:
 	./scripts/build-ios.sh build
+
+asios-fixplist:
+	./scripts/build-ios.sh fixplist
 
 asios-upload:
 	./scripts/build-ios.sh upload
