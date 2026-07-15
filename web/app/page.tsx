@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { AppScreenshots } from "@/components/app-screenshots";
+import { StoreBadges } from "@/components/store-badges";
 
 const features = [
   {
@@ -31,13 +32,8 @@ export default function HomePage() {
           Siti runs on your iPhone, iPad, and Mac. Ask it anything, and your
           conversations stay with you instead of on someone else&apos;s servers.
         </p>
-        <div className="mt-10 flex items-center justify-center gap-4">
-          <a
-            href="https://apps.apple.com/se/app/siti-ai/id6780047972"
-            className="rounded-sm bg-accent px-6 py-3 text-sm font-medium text-bg transition-colors hover:bg-accent-hover"
-          >
-            Download for Apple
-          </a>
+        <div className="mt-10 flex flex-col items-center justify-center gap-6">
+          <StoreBadges />
           <Link
             href="/about"
             className="rounded-sm border border-border px-6 py-3 text-sm font-medium text-ink transition-colors hover:bg-surface"
