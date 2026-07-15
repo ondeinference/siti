@@ -11,5 +11,6 @@
 name = "sitiai"
 
 [project]
+id = 59
 frontend_app_id = "1c28381c-7f8f-4637-822c-e2b31424448c"
 source = "web" # local Next.js app directory to deploy
