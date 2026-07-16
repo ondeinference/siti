@@ -16,6 +16,14 @@
 # make asios-fixplist     — rewrite beta toolchain stamps (Info.plist + Mach-O) to release values, re-sign
 # make asios-upload       — xcrun altool upload
 #
+# ── visionOS App Store (TestFlight) ────────────────────────────────────────
+# make asvision            — full pipeline: generate → archive → export → fixplist → upload
+# make asvision-generate   — xcodegen generate (xcode/SitiVision.xcodeproj)
+# make asvision-archive    — xcodebuild archive (automatic signing)
+# make asvision-export     — xcodebuild -exportArchive → .ipa
+# make asvision-fixplist   — rewrite beta host-OS stamp (Info.plist + Mach-O) to release values, re-sign
+# make asvision-upload     — xcrun altool upload
+#
 # ── Android Play Store ─────────────────────────────────────────────────────
 # make psmobile          — full pipeline: clean → init → icons → override → keystore → build → open (.aab)
 # make psmobile-clean    — rm -rf src-tauri/gen/android
@@ -36,6 +44,7 @@
 .PHONY: dev build \
         asmacos asmacos-build asmacos-sign asmacos-upload \
         asios asios-clean asios-init asios-icons asios-override asios-build asios-fixplist asios-upload \
+        asvision asvision-generate asvision-archive asvision-export asvision-fixplist asvision-upload \
         psmobile psmobile-clean psmobile-init psmobile-icons psmobile-override psmobile-keystore psmobile-build psmobile-open \
         web-dev web-build web-deploy \
         fmt lint clean
@@ -79,6 +88,26 @@ asios-fixplist:
 
 asios-upload:
 	./scripts/build-ios.sh upload
+
+# ── visionOS App Store (TestFlight) ────────────────────────────────────────
+
+asvision:
+	./scripts/build-visionos.sh all
+
+asvision-generate:
+	./scripts/build-visionos.sh generate
+
+asvision-archive:
+	./scripts/build-visionos.sh archive
+
+asvision-export:
+	./scripts/build-visionos.sh export
+
+asvision-fixplist:
+	./scripts/build-visionos.sh fixplist
+
+asvision-upload:
+	./scripts/build-visionos.sh upload
 
 # ── Android Play Store ─────────────────────────────────────────────────────
 
