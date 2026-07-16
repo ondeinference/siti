@@ -55,6 +55,13 @@ lto = "thin"
 codegen-units = 1
 strip = "debuginfo"
 
+# Do NOT strip proc-macro / build-script dylibs. On beta macOS (Darwin 26/27)
+# `strip = "debuginfo"` corrupts their Mach-O LINKEDIT ("mis-aligned LINKEDIT
+# string pool"), so rustc can't dlopen them mid-build ("can't find crate for
+# thiserror_impl"). The shipped app binary stays stripped via the profile above.
+[profile.release.build-override]
+strip = false
+
 # ── Local Onde SDK development ─────────────────────────────────────────────────
 # Uncomment to build Siti against a local checkout of the Onde engine (sibling
 # directory) instead of the published crate. Keep this commented on `main`.

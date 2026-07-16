@@ -27,6 +27,35 @@ set -euo pipefail
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 APPSTORE_CONFIG="${REPO_ROOT}/src-tauri/tauri.prod-macos-appstore.conf.json"
 
+# Auto-load the untracked .env.appstore (signing identities + ASC creds) so
+# `make asmacos` works without the caller exporting them first. See
+# .env.appstore.example for the expected keys.
+if [[ -f "${REPO_ROOT}/.env.appstore" ]]; then
+  set -a
+  # shellcheck disable=SC1091
+  . "${REPO_ROOT}/.env.appstore"
+  set +a
+fi
+
+# Xcode toolchain. App Store Connect rejects binaries built with a beta Xcode or
+# beta SDK, so pin a release Xcode here regardless of the global `xcode-select`.
+# Default: the active xcode-select if it is a release, otherwise the newest
+# non-beta Xcode under /Applications.
+# Override: DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer ./scripts/build-appstore.sh
+pick_release_xcode() {
+  local active; active="$(xcode-select -p 2>/dev/null)"
+  if [[ -n "$active" && "$active" != *[Bb]eta* ]]; then
+    printf '%s\n' "$active"; return
+  fi
+  local app
+  for app in /Applications/Xcode*.app; do
+    case "$app" in *[Bb]eta*) continue ;; esac
+    [[ -d "$app/Contents/Developer" ]] && { printf '%s\n' "$app/Contents/Developer"; return; }
+  done
+}
+DEVELOPER_DIR="${DEVELOPER_DIR:-$(pick_release_xcode)}"
+export DEVELOPER_DIR
+
 # ── Overridable config ─────────────────────────────────────────────────────────
 #
 # Installer signing identity: SHA-1 fingerprint of the "3rd Party Mac Developer
@@ -60,13 +89,37 @@ PKG_PATH="${REPO_ROOT}/${APP_NAME}.pkg"
 
 step() { echo ""; echo "── $* ──────────────────────────────────────────────"; }
 ok()   { echo "✅  $*"; }
-fail() { echo "❌  $*" >&2; exit 1; }
+fail() { printf "❌  %b\n" "$*" >&2; exit 1; }
+
+# Refuse to build with a beta toolchain — App Store Connect rejects beta-built
+# binaries (the cause of an "Invalid Binary" after upload). DEVELOPER_DIR is
+# pinned to a release Xcode above; `cargo tauri build` resolves the macOS
+# linker/SDK via xcrun, which honors DEVELOPER_DIR.
+require_release_xcode() {
+  [[ -n "${DEVELOPER_DIR}" && -d "${DEVELOPER_DIR}" ]] \
+    || fail "No release Xcode found.\n       Install a release Xcode, or set DEVELOPER_DIR to its Contents/Developer dir."
+  case "${DEVELOPER_DIR}" in
+    *[Bb]eta*)
+      fail "DEVELOPER_DIR points at a beta Xcode:\n       ${DEVELOPER_DIR}\n       App Store Connect rejects beta-built binaries. Point DEVELOPER_DIR at a release Xcode." ;;
+  esac
+  echo "🛠   Xcode  → $(xcodebuild -version 2>/dev/null | head -1)  [${DEVELOPER_DIR}]"
+}
+
+# A genuinely full disk during a large release build writes truncated/corrupt
+# proc-macro dylibs, which fail with the same "can't find crate" errors as the
+# beta-macOS strip bug — easy to conflate. Guard against it up front.
+preflight_disk() {
+  local free_gb; free_gb=$(df -g / | awk 'NR==2 {print $4}')
+  [[ "${free_gb:-0}" -ge 20 ]] || fail "Only ${free_gb} GB free on / — a universal release build needs ~20 GB+. Free space and retry."
+}
 
 # ── Steps ─────────────────────────────────────────────────────────────────────
 
 do_build() {
   step "1/3  Build"
 
+  require_release_xcode
+  preflight_disk
   [[ -f "$APPSTORE_CONFIG" ]] || fail "Config not found: $APPSTORE_CONFIG"
 
   # CFBundleVersion: YYYYMMDD.HHMM (UTC)
