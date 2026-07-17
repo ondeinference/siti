@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+    html, body {
+      width: 3840px;
+      height: 2160px;
+      overflow: hidden;
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    }
+
+    /* ── spatial environment ──────────────────────────── */
+    .stage {
+      position: relative;
+      width: 3840px;
+      height: 2160px;
+      background: linear-gradient(155deg, #eceae4 0%, #d9d6cd 55%, #cdc9bd 100%);
+      display: flex;
+      align-items: center;
+      overflow: hidden;
+    }
+
+    /* soft ambient light blobs — implies a real room without faking a photo */
+    .glow {
+      position: absolute;
+      border-radius: 50%;
+      filter: blur(180px);
+      opacity: 0.55;
+    }
+    .glow-1 { width: 1400px; height: 1400px; top: -420px; left: -320px; background: #ffffff; opacity: 0.5; }
+    .glow-2 { width: 1200px; height: 1200px; bottom: -480px; right: -260px; background: #3a7a56; opacity: 0.16; }
+
+    /* faint floor line to ground the floating window in space */
+    .floor {
+      position: absolute;
+      left: 0; right: 0; bottom: 260px;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(26,52,40,0.10) 30%, rgba(26,52,40,0.10) 70%, transparent);
+    }
+
+    /* ── text section ─────────────────────────────── */
+    .text-section {
+      position: relative;
+      z-index: 2;
+      width: 1180px;
+      padding-left: 160px;
+      padding-right: 60px;
+    }
+
+    .label {
+      font-size: 34px;
+      font-weight: 700;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: #3a7a56;
+      margin-bottom: 34px;
+    }
+
+    .headline {
+      font-size: 96px;
+      font-weight: 800;
+      line-height: 1.08;
+      color: #1a3428;
+      margin-bottom: 42px;
+    }
+
+    .headline .accent {
+      color: #3a7a56;
+    }
+
+    .subtext {
+      font-size: 38px;
+      font-weight: 400;
+      line-height: 1.5;
+      color: #5f6a62;
+      max-width: 820px;
+    }
+
+    /* ── floating glass window ────────────────────── */
+    .window-wrap {
+      position: relative;
+      z-index: 2;
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding-right: 140px;
+      perspective: 2400px;
+    }
+
+    .window {
+      width: 1980px;
+      height: 1560px;
+      border-radius: 46px;
+      background: rgba(255, 255, 255, 0.78);
+      border: 1.5px solid rgba(255, 255, 255, 0.9);
+      box-shadow:
+        0 6px 0 rgba(255,255,255,0.5) inset,
+        0 90px 160px rgba(20, 30, 24, 0.28),
+        0 30px 60px rgba(20, 30, 24, 0.16);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      transform: rotateY(-4deg) rotateX(1deg);
+    }
+
+    /* window chrome */
+    .titlebar {
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      gap: 20px;
+      padding: 34px 44px 26px;
+    }
+
+    .brain-icon {
+      width: 40px;
+      height: 40px;
+      color: #3a7a56;
+      flex-shrink: 0;
+    }
+
+    .titlebar-text {
+      flex: 1;
+    }
+
+    .window-title {
+      font-size: 30px;
+      font-weight: 600;
+      color: #14211a;
+    }
+
+    .window-subtitle {
+      font-size: 20px;
+      color: #8a938c;
+      margin-top: 2px;
+    }
+
+    .status-pill {
+      font-size: 18px;
+      font-weight: 600;
+      color: #3a7a56;
+      background: rgba(58, 122, 86, 0.12);
+      padding: 8px 18px;
+      border-radius: 999px;
+    }
+
+    .divider {
+      height: 1.5px;
+      background: rgba(20, 33, 26, 0.08);
+      margin: 0 44px;
+    }
+
+    /* message area */
+    .messages {
+      flex: 1;
+      padding: 44px 64px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      gap: 26px;
+    }
+
+    .row { display: flex; }
+    .row.user { justify-content: flex-end; }
+
+    .bubble {
+      max-width: 66%;
+      font-size: 24px;
+      line-height: 1.5;
+      padding: 20px 26px;
+      border-radius: 26px;
+    }
+
+    .bubble.assistant {
+      background: rgba(20, 33, 26, 0.06);
+      color: #1a2620;
+    }
+
+    .bubble.user {
+      background: #3a7a56;
+      color: #ffffff;
+    }
+
+    .sender {
+      font-size: 16px;
+      color: #9aa39c;
+      margin-bottom: 8px;
+      padding: 0 4px;
+    }
+    .row.user .sender { text-align: right; }
+
+    /* input bar */
+    .input-bar {
+      flex-shrink: 0;
+      padding: 30px 44px 44px;
+    }
+
+    .input-row {
+      background: rgba(20, 33, 26, 0.06);
+      border-radius: 32px;
+      padding: 22px 22px 22px 32px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+    }
+
+    .input-placeholder {
+      font-size: 24px;
+      color: #9aa39c;
+    }
+
+    .send-btn {
+      width: 52px;
+      height: 52px;
+      border-radius: 50%;
+      background: #3a7a56;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+  </style>
+</head>
+<body>
+  <div class="stage">
+    <div class="glow glow-1"></div>
+    <div class="glow glow-2"></div>
+    <div class="floor"></div>
+
+    <div class="text-section">
+      <div class="label">Spatial Assistant</div>
+      <div class="headline">
+        Your assistant, <span class="accent">right in the room.</span>
+      </div>
+      <div class="subtext">Ask Siti anything from a floating glass window — every word stays entirely on your Vision Pro.</div>
+    </div>
+
+    <div class="window-wrap">
+      <div class="window">
+        <div class="titlebar">
+          <svg class="brain-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M9.5 2a3.5 3.5 0 0 0-3.5 3.5v.55A3.5 3.5 0 0 0 3 9.5a3.5 3.5 0 0 0 1.06 2.52A3.5 3.5 0 0 0 3.5 14a3.5 3.5 0 0 0 2.53 3.37A3.5 3.5 0 0 0 9.5 21a3.5 3.5 0 0 0 3.5-3.5V5.5A3.5 3.5 0 0 0 9.5 2Z"/>
+            <path d="M14.5 2a3.5 3.5 0 0 1 3.5 3.5v.55A3.5 3.5 0 0 1 21 9.5a3.5 3.5 0 0 1-1.06 2.52A3.5 3.5 0 0 1 20.5 14a3.5 3.5 0 0 1-2.53 3.37A3.5 3.5 0 0 1 14.5 21a3.5 3.5 0 0 1-3.5-3.5V5.5A3.5 3.5 0 0 1 14.5 2Z"/>
+          </svg>
+          <div class="titlebar-text">
+            <div class="window-title">Siti AI</div>
+            <div class="window-subtitle">on-device · private</div>
+          </div>
+          <div class="status-pill">Ready</div>
+        </div>
+
+        <div class="divider"></div>
+
+        <div class="messages">
+          <div class="row user">
+            <div>
+              <div class="sender">You</div>
+              <div class="bubble user">Explain the difference between a window and a volume in visionOS, in plain terms.</div>
+            </div>
+          </div>
+          <div class="row">
+            <div>
+              <div class="sender">Siti</div>
+              <div class="bubble assistant">A window is flat, like a page floating in space — good for reading and typing. A volume has real depth, so 3D content can sit inside it and you can walk around it.</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="divider"></div>
+
+        <div class="input-bar">
+          <div class="input-row">
+            <span class="input-placeholder">Message Siti…</span>
+            <div class="send-btn">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="12" y1="19" x2="12" y2="5"/>
+                <polyline points="5 12 12 5 19 12"/>
+              </svg>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
