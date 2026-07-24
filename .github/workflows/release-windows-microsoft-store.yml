@@ -1,0 +1,129 @@
+name: "Release Siti AI Windows Microsoft Store"
+
+on:
+  push:
+    branches:
+      - release/windows-microsoft-store
+  workflow_dispatch:
+
+# Push to the release branch above to build and draft-release the Windows
+# Microsoft Store artifacts. The .msi/.exe are for direct download; the MSIX is
+# what gets submitted to Partner Center (the Store re-signs it), which is the
+# only form that carries the package identity Store services need.
+jobs:
+  publish-tauri:
+    permissions:
+      contents: write
+    runs-on: windows-latest
+    # Job-level env so the MSIX steps' own `if:` conditions can read these — a
+    # step-level env is not in scope for that same step's `if`. When the secrets
+    # are absent the MSIX steps skip and the unsigned .msi/.exe still ship.
+    env:
+      MSIX_PUBLISHER: ${{ secrets.MSIX_PUBLISHER }}
+      MSIX_IDENTITY_NAME: ${{ secrets.MSIX_IDENTITY_NAME }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: setup node
+        uses: actions/setup-node@v7
+        with:
+          node-version: 22
+
+      # No version pin: reads the exact pnpm from package.json's
+      # packageManager field (pnpm@11.8.0), matching ci.yml.
+      - uses: pnpm/action-setup@v6
+
+      - name: Install Rust stable
+        uses: dtolnay/rust-toolchain@stable
+
+      # The full dependency tree build is slow cold. Cache the cargo registry
+      # and target/ keyed on Cargo.lock so a repeat run (a manifest tweak,
+      # another Partner Center validation round) restores in minutes instead of
+      # rebuilding from scratch.
+      - name: Cache Rust build
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+
+      # Validate the MSIX manifest before the long Rust build rather than after
+      # it. makeappx checks the manifest against its schema regardless of what
+      # the payload files contain, so a stub exe is enough to catch a schema
+      # error in seconds instead of after a full build. Skipped when the MSIX
+      # secrets are absent so the .msi/.exe build still ships.
+      - name: Validate MSIX manifest (fast fail)
+        if: ${{ env.MSIX_PUBLISHER != '' && env.MSIX_IDENTITY_NAME != '' }}
+        shell: pwsh
+        run: ./scripts/build-msix.ps1 -ValidateOnly
+
+      - name: Install frontend dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Patch src-tauri/.cargo/config.toml for native Windows build
+        shell: pwsh
+        run: |
+          # The .cargo/config.toml is authored for macOS hosts: the [env]
+          # section force-sets CC/CXX to /usr/bin/clang and a macOS deployment
+          # target, none of which exist on this runner. Strip that section so
+          # Rust falls back to the runner's native MSVC toolchain. The
+          # per-Apple-target and Android sections are inert here and left alone.
+          $path = "src-tauri/.cargo/config.toml"
+          if (Test-Path $path) {
+            $lines = Get-Content $path
+            $out = [System.Collections.Generic.List[string]]::new()
+            $skipSection = $false
+
+            foreach ($line in $lines) {
+              if ($line -match '^\[env\]') {
+                $skipSection = $true
+                continue
+              }
+              if ($skipSection -and $line -match '^\[') {
+                $skipSection = $false
+              }
+              if (-not $skipSection) {
+                $out.Add($line)
+              }
+            }
+
+            $out | Set-Content $path -Encoding UTF8
+            Write-Host "Patched src-tauri/.cargo/config.toml — removed macOS-only [env] section"
+          } else {
+            Write-Host "No src-tauri/.cargo/config.toml to patch"
+          }
+
+      - name: Setup MSVC developer environment
+        uses: ilammy/msvc-dev-cmd@v1
+
+      - name: Build App
+        shell: pwsh
+        run: pnpm tauri build -c src-tauri/tauri.prod-windows-microsoftstore.conf.json
+
+      # The .msi/.exe above are for direct download only. A Store MSI/EXE
+      # submission is just a hosted installer URL, so it never gets package
+      # identity and Windows.Services.Store add-ons would fail from it. The MSIX
+      # below is what goes to Partner Center. It is deliberately left unsigned:
+      # the Store re-signs with the publisher cert. Skipped when the MSIX
+      # secrets are absent.
+      - name: Pack MSIX for Partner Center
+        if: ${{ env.MSIX_PUBLISHER != '' && env.MSIX_IDENTITY_NAME != '' }}
+        shell: pwsh
+        run: ./scripts/build-msix.ps1
+
+      - name: Extract version from tauri.prod-windows-microsoftstore.conf.json
+        id: get_version
+        shell: pwsh
+        run: |
+          $json = Get-Content src-tauri/tauri.prod-windows-microsoftstore.conf.json | ConvertFrom-Json
+          echo "VERSION=$($json.version)" >> $env:GITHUB_ENV
+
+      - name: Release
+        uses: softprops/action-gh-release@v2
+        with:
+          draft: true
+          prerelease: false
+          body: "See the assets to download this version and install."
+          name: "Siti AI v${{ env.VERSION }} (Windows Microsoft Store)"
+          files: |
+            src-tauri/target/release/bundle/msi/*.msi
+            src-tauri/target/release/bundle/nsis/*.exe
+            src-tauri/target/release/bundle/msix/*.msix

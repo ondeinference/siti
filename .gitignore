@@ -60,3 +60,7 @@ keystore.properties
 /xcode/*.xcodeproj/
 /xcode/build/
 /xcode/.swiftpm/
+
+# Local AI/agent tooling state — never commit to this public repo
+.claude/
+.playwright-mcp/
