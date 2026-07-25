@@ -162,6 +162,8 @@ pub(crate) fn config_for_model_id(id: &str) -> Option<GgufModelConfig> {
         GgufModelConfig::qwen25_coder_3b()
     } else if id == m::BARTOWSKI_QWEN25_CODER_7B_INSTRUCT_GGUF {
         GgufModelConfig::qwen25_coder_7b()
+    } else if id == m::BARTOWSKI_QWEN3_0_6B_GGUF {
+        GgufModelConfig::qwen3_0_6b()
     } else if id == m::BARTOWSKI_QWEN3_1_7B_GGUF {
         GgufModelConfig::qwen3_1_7b()
     } else if id == m::BARTOWSKI_QWEN3_4B_GGUF {
@@ -170,6 +172,14 @@ pub(crate) fn config_for_model_id(id: &str) -> Option<GgufModelConfig> {
         GgufModelConfig::qwen3_8b()
     } else if id == m::BARTOWSKI_QWEN3_14B_GGUF {
         GgufModelConfig::qwen3_14b()
+    } else if id == m::BARTOWSKI_QWEN3_32B_GGUF {
+        GgufModelConfig::qwen3_32b()
+    } else if id == m::BARTOWSKI_QWEN3_4B_INSTRUCT_2507_GGUF {
+        GgufModelConfig::qwen3_4b_instruct_2507()
+    } else if id == m::BARTOWSKI_QWEN3_4B_THINKING_2507_GGUF {
+        GgufModelConfig::qwen3_4b_thinking_2507()
+    } else if id == m::BARTOWSKI_QWEN3_30B_A3B_INSTRUCT_2507_GGUF {
+        GgufModelConfig::qwen3_30b_a3b_instruct_2507()
     } else if id == m::THEBLOKE_DEEPSEEK_CODER_6_7B_INSTRUCT_GGUF {
         GgufModelConfig::deepseek_coder_6_7b()
     } else {
