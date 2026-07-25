@@ -44,9 +44,14 @@ use {
     crate::events::{EVENT_CHAT_REPLY, EVENT_CHAT_STATUS_CHANGED},
     log::error,
     once_cell::sync::Lazy,
-    onde::inference::{ChatEngine, GgufModelConfig, SamplingConfig},
+    onde::inference::{ChatEngine, GgufModelConfig, InferenceError, SamplingConfig},
     tauri::{AppHandle, Emitter},
 };
+
+// `IsqModelConfig` and the ISQ load path only exist on macOS (Metal). Gemma is
+// offered exclusively there — see `ResolvedModel` below for the reasoning.
+#[cfg(target_os = "macos")]
+use onde::inference::IsqModelConfig;
 
 // ── Response / payload types ─────────────────────────────────────────────────
 
@@ -188,12 +193,92 @@ pub(crate) fn config_for_model_id(id: &str) -> Option<GgufModelConfig> {
     Some(cfg)
 }
 
-/// Return the config for the currently selected model (falling back to the
-/// platform default if the selection is somehow unknown).
+// ── Gemma (ISQ safetensors path, macOS only) ─────────────────────────────────
+//
+// Gemma cannot be loaded through the GGUF path Siti uses for every other model:
+// mistral.rs's GGUF loader (`GGUFArchitecture`) only recognises Llama / Qwen2 /
+// Qwen3 / Mistral3 / etc. — it has **no Gemma architecture**, so a Gemma GGUF
+// file fails to load with "Unknown GGUF architecture `gemma2`". mistral.rs does
+// support Gemma, but only via its plain safetensors loader, which onde exposes
+// through the ISQ (in-situ quantise) path (`load_isq_model`).
+//
+// That path is Metal-only, so Gemma is offered on **macOS only** — never on
+// iOS/Android, whose builds have no `IsqModelConfig` load path and far tighter
+// memory budgets than an ISQ load (full bf16 weights downloaded, then quantised
+// in memory) allows.
+
+/// HuggingFace repo id for the Gemma 2 2B Instruct model, loaded via ISQ.
+///
+/// The `unsloth` re-upload is used instead of `google/gemma-2-2b-it` because the
+/// official repo is gated (requires accepting Google's licence + an HF token),
+/// which Siti's credential-free offline download cannot satisfy. This mirror
+/// ships the same `Gemma2ForCausalLM` bf16 weights, ungated.
+#[cfg(target_os = "macos")]
+pub(crate) const GEMMA2_2B_IT_ISQ_ID: &str = "unsloth/gemma-2-2b-it";
+
+/// ISQ config for Gemma 2 2B Instruct (4-bit, Metal). macOS only.
+#[cfg(target_os = "macos")]
+pub(crate) fn gemma2_2b_isq_config() -> IsqModelConfig {
+    IsqModelConfig {
+        model_id: GEMMA2_2B_IT_ISQ_ID.to_string(),
+        isq_bits: 4,
+        display_name: "Gemma 2 2B (ISQ 4-bit)".to_string(),
+        approx_memory: "~1.6 GB (ISQ Q4K, Metal)".to_string(),
+    }
+}
+
+/// A model selection resolved to the concrete engine config and load path it
+/// needs. Most models are GGUF; Gemma is the sole ISQ model (macOS only).
 #[cfg(any(target_os = "macos", target_os = "ios", target_os = "android"))]
-pub(crate) fn model_config() -> GgufModelConfig {
+pub(crate) enum ResolvedModel {
+    Gguf(GgufModelConfig),
+    #[cfg(target_os = "macos")]
+    Isq(IsqModelConfig),
+}
+
+#[cfg(any(target_os = "macos", target_os = "ios", target_os = "android"))]
+impl ResolvedModel {
+    /// Human-friendly display name for the resolved model.
+    pub(crate) fn display_name(&self) -> String {
+        match self {
+            ResolvedModel::Gguf(c) => c.display_name.clone(),
+            #[cfg(target_os = "macos")]
+            ResolvedModel::Isq(c) => c.display_name.clone(),
+        }
+    }
+
+    /// Load the resolved model into the shared [`ENGINE`], dispatching to the
+    /// GGUF or ISQ load path as appropriate.
+    pub(crate) async fn load(
+        self,
+        system_prompt: Option<String>,
+        sampling: Option<SamplingConfig>,
+    ) -> Result<std::time::Duration, InferenceError> {
+        match self {
+            ResolvedModel::Gguf(c) => ENGINE.load_gguf_model(c, system_prompt, sampling).await,
+            #[cfg(target_os = "macos")]
+            ResolvedModel::Isq(c) => ENGINE.load_isq_model(c, system_prompt, sampling).await,
+        }
+    }
+}
+
+/// Resolve a HuggingFace repo id to a loadable [`ResolvedModel`], or `None` if
+/// the id is not a model Siti can load on this platform.
+#[cfg(any(target_os = "macos", target_os = "ios", target_os = "android"))]
+pub(crate) fn resolve_model_id(id: &str) -> Option<ResolvedModel> {
+    #[cfg(target_os = "macos")]
+    if id == GEMMA2_2B_IT_ISQ_ID {
+        return Some(ResolvedModel::Isq(gemma2_2b_isq_config()));
+    }
+    config_for_model_id(id).map(ResolvedModel::Gguf)
+}
+
+/// Return the resolved model (GGUF or ISQ) for the current selection, falling
+/// back to the platform-default GGUF model if the selection is unknown.
+#[cfg(any(target_os = "macos", target_os = "ios", target_os = "android"))]
+pub(crate) fn resolved_model_config() -> ResolvedModel {
     let id = SELECTED_MODEL.lock().map(|g| g.clone()).unwrap_or_default();
-    config_for_model_id(&id).unwrap_or_else(siti_default_config)
+    resolve_model_id(&id).unwrap_or_else(|| ResolvedModel::Gguf(siti_default_config()))
 }
 
 /// Return the sampling config for the currently selected model.
