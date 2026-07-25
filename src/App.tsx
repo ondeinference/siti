@@ -6,6 +6,7 @@ import {
   type ModelInfo,
   listModels,
   setModel,
+  removeModel,
   sendMessage as sendMessageCmd,
   getStatus,
   getHistory,
@@ -207,6 +208,16 @@ export default function App() {
     }
   }
 
+  async function handleRemoveModel(id: string) {
+    try {
+      await removeModel(id);
+    } catch (e) {
+      setStatusError(String(e));
+    } finally {
+      await refreshModels();
+    }
+  }
+
   function handleKeyDown(e: KeyboardEvent<HTMLTextAreaElement>) {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
@@ -297,6 +308,7 @@ export default function App() {
         status={status}
         statusError={statusError}
         onSelectModel={handleSelectModel}
+        onRemoveModel={handleRemoveModel}
         onClose={() => setSettingsOpen(false)}
       />
     </div>

@@ -20,6 +20,7 @@ export interface ModelInfo {
   description: string;
   approx_memory: string;
   size_bytes: number | null;
+  is_downloaded: boolean;
   is_selected: boolean;
 }
 
@@ -53,6 +54,9 @@ export const listModels = () => invoke<ModelInfo[]>("chat_list_models");
 
 export const setModel = (modelId: string) =>
   invoke<void>("chat_set_model", { modelId });
+
+export const removeModel = (modelId: string) =>
+  invoke<string>("chat_remove_model", { modelId });
 
 export const sendMessage = (message: string) =>
   invoke<void>("chat_send_message", { message });

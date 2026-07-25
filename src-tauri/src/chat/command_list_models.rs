@@ -38,7 +38,7 @@ fn sanitize_description(desc: &str) -> String {
 #[cfg(any(target_os = "macos", target_os = "ios", target_os = "android"))]
 #[tauri::command]
 pub async fn chat_list_models() -> Vec<ModelInfo> {
-    use super::{config_for_model_id, SELECTED_MODEL};
+    use super::{config_for_model_id, is_model_downloaded, SELECTED_MODEL};
 
     let selected = SELECTED_MODEL.lock().map(|g| g.clone()).unwrap_or_default();
 
@@ -53,6 +53,7 @@ pub async fn chat_list_models() -> Vec<ModelInfo> {
                 description: sanitize_description(info.description),
                 approx_memory: cfg.approx_memory,
                 size_bytes: Some(info.expected_size_bytes),
+                is_downloaded: is_model_downloaded(info.id, info.expected_size_bytes),
                 is_selected: info.id == selected,
             })
         })
@@ -64,6 +65,7 @@ pub async fn chat_list_models() -> Vec<ModelInfo> {
     #[cfg(target_os = "macos")]
     {
         use super::{gemma2_2b_isq_config, GEMMA2_2B_IT_ISQ_ID};
+        const GEMMA2_2B_EXPECTED_BYTES: u64 = 5_228_717_512;
         let cfg = gemma2_2b_isq_config();
         models.push(ModelInfo {
             id: GEMMA2_2B_IT_ISQ_ID.to_string(),
@@ -75,7 +77,8 @@ pub async fn chat_list_models() -> Vec<ModelInfo> {
             ),
             approx_memory: cfg.approx_memory,
             // Full bf16 safetensors download before in-situ quantisation (~5.2 GB).
-            size_bytes: Some(5_228_717_512),
+            size_bytes: Some(GEMMA2_2B_EXPECTED_BYTES),
+            is_downloaded: is_model_downloaded(GEMMA2_2B_IT_ISQ_ID, GEMMA2_2B_EXPECTED_BYTES),
             is_selected: GEMMA2_2B_IT_ISQ_ID == selected,
         });
     }

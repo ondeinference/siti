@@ -558,6 +558,88 @@ html, body {
   background: #e5484d;
 }
 
+/* ── Supported Models list ─────────────────────────────────────────────── */
+
+.model-list-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 16px;
+  min-height: 56px;
+}
+
+.model-list-row + .model-list-row {
+  border-top: 1px solid var(--border);
+}
+
+.model-list-info {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.model-list-name {
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.model-list-meta {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.model-list-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.model-downloaded {
+  display: flex;
+  align-items: center;
+  color: #34c759;
+}
+
+.model-action {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  cursor: pointer;
+  padding: 0;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.model-action.download {
+  color: #0a84ff;
+}
+
+.model-action.download:hover:not(:disabled) {
+  background: rgba(10, 132, 255, 0.15);
+}
+
+.model-action.remove {
+  color: var(--text-secondary);
+}
+
+.model-action.remove:hover:not(:disabled) {
+  background: rgba(229, 72, 77, 0.15);
+  color: #e5484d;
+}
+
+.model-action:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
 .settings-note {
   font-size: 12px;
   line-height: 1.5;
