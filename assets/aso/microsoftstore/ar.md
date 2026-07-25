@@ -109,7 +109,7 @@
 
 تتضمن هذه الإصدارة تحسينات في الأداء وإصلاحات للأخطاء.
 
-## Search Terms (7 terms, max 30 characters each)
+## Search Terms (7 terms, max 40 characters each, max 21 words total)
 1. مساعد ذكاء اصطناعي
 2. ذكاء اصطناعي خاص
 3. محادثة ذكاء بدون انترنت

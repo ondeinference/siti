@@ -109,7 +109,7 @@ Built with modern native technology for a fast, lightweight experience on your W
 
 Performance improvements and bug fixes included in this release.
 
-## Search Terms (7 terms, max 30 characters each)
+## Search Terms (7 terms, max 40 characters each, max 21 words total)
 1. AI assistant
 2. private AI
 3. offline AI chat

@@ -109,7 +109,7 @@ Dibuat dengan teknologi natif modern untuk pengalaman cepat dan ringan di PC Win
 
 Peningkatan performa dan perbaikan bug disertakan dalam rilis ini.
 
-## Search Terms (7 terms, max 30 characters each)
+## Search Terms (7 terms, max 40 characters each, max 21 words total)
 1. asisten AI
 2. AI privat
 3. obrolan AI offline
