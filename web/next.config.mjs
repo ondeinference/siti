@@ -21,6 +21,18 @@ const nextConfig = {
   // preserves the source path (`.next/standalone/web/server.js`); the smbCloud CLI
   // handles this nested runtime layout.
   outputFileTracingRoot: path.join(__dirname, ".."),
+
+  // Ensure the extensionless apple-app-site-association file is served with the
+  // correct Content-Type — some static hosts default to application/octet-stream
+  // for files without an extension, which Apple's AASA fetcher may reject.
+  async headers() {
+    return [
+      {
+        source: "/.well-known/apple-app-site-association",
+        headers: [{ key: "Content-Type", value: "application/json" }],
+      },
+    ];
+  },
 };
 
 export default nextConfig;
