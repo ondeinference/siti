@@ -33,7 +33,7 @@ tokio = { version = "1", features = ["macros", "rt"] }
 # Published crate: https://crates.io/crates/onde — this is the SDK Siti showcases.
 # For local SDK development, uncomment the [patch.crates-io] block at the bottom
 # of this file to build against a sibling `onde` checkout instead.
-onde = "1.1"
+onde = "1.2.2"
 
 # Apple App Group container lookup — used to redirect the HuggingFace model
 # cache into the shared `group.com.ondeinference.apps` container.
