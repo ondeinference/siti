@@ -12,8 +12,8 @@ use tauri::AppHandle;
 #[cfg(any(target_os = "macos", target_os = "ios", target_os = "android"))]
 use {
     super::{
-        config_for_model_id, emit_chat_status, fmt_duration, sampling_config, CHAT_SYSTEM_PROMPT,
-        ENGINE, SELECTED_MODEL,
+        emit_chat_status, fmt_duration, resolve_model_id, resolved_model_config, sampling_config,
+        CHAT_SYSTEM_PROMPT, ENGINE, SELECTED_MODEL,
     },
     crate::constants::ChatStatus,
     log::{error, info},
@@ -26,11 +26,11 @@ use {
 #[tauri::command]
 pub async fn chat_set_model(app: AppHandle, model_id: String) -> Result<(), String> {
     // ── 1. Validate & resolve the requested model ────────────────────────
-    let config = config_for_model_id(&model_id)
-        .ok_or_else(|| format!("Unknown or unsupported model id: {model_id}"))?;
-    let display_name = config.display_name.clone();
+    let display_name = resolve_model_id(&model_id)
+        .ok_or_else(|| format!("Unknown or unsupported model id: {model_id}"))?
+        .display_name();
 
-    // ── 2. Persist the selection so model_config()/sampling_config() agree ─
+    // ── 2. Persist the selection so resolved_model_config()/sampling_config() agree ─
     // NB: never hold the std Mutex guard across an `.await` (it would make this
     // command future `!Send`), so resolve the loaded-state first.
     let already_loaded = ENGINE.is_loaded().await;
@@ -49,14 +49,15 @@ pub async fn chat_set_model(app: AppHandle, model_id: String) -> Result<(), Stri
     emit_chat_status(&app, ChatStatus::Loading, Some(&display_name), None);
 
     // ── 3. Swap models off-thread; report progress via events ────────────
+    // Re-resolve from the (now-persisted) selection inside the task so the
+    // GGUF/ISQ dispatch matches exactly what `chat_send_message` would load.
     tokio::task::spawn(async move {
         if ENGINE.is_loaded().await {
             ENGINE.unload_model().await;
         }
 
-        let result = ENGINE
-            .load_gguf_model(
-                config,
+        let result = resolved_model_config()
+            .load(
                 Some(CHAT_SYSTEM_PROMPT.to_string()),
                 Some(sampling_config()),
             )

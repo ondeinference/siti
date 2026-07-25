@@ -58,6 +58,28 @@ pub async fn chat_list_models() -> Vec<ModelInfo> {
         })
         .collect();
 
+    // Gemma is not in onde's GGUF catalogue: mistral.rs's GGUF loader has no
+    // Gemma architecture, so Gemma can only load via the ISQ (safetensors)
+    // path, which is Metal-only. Offer it on macOS exclusively.
+    #[cfg(target_os = "macos")]
+    {
+        use super::{gemma2_2b_isq_config, GEMMA2_2B_IT_ISQ_ID};
+        let cfg = gemma2_2b_isq_config();
+        models.push(ModelInfo {
+            id: GEMMA2_2B_IT_ISQ_ID.to_string(),
+            name: "Gemma 2 2B (ISQ)".to_string(),
+            org: "Google".to_string(),
+            description: sanitize_description(
+                "Google's Gemma 2 2B Instruct, quantised on-device to 4-bit (~1.6 GB). \
+                 Loaded from safetensors via ISQ; requires 8+ GB RAM.",
+            ),
+            approx_memory: cfg.approx_memory,
+            // Full bf16 safetensors download before in-situ quantisation (~5.2 GB).
+            size_bytes: Some(5_228_717_512),
+            is_selected: GEMMA2_2B_IT_ISQ_ID == selected,
+        });
+    }
+
     // Smallest (most device-friendly) first.
     models.sort_by_key(|m| m.size_bytes.unwrap_or(u64::MAX));
     models

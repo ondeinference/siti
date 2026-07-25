@@ -34,14 +34,13 @@ pub async fn chat_send_message(app: AppHandle, message: String) -> Result<(), St
     if !ENGINE.is_loaded().await {
         info!("No chat model loaded; lazy-loading default model.");
 
-        let config = model_config();
-        let display_name = config.display_name.clone();
+        let config = resolved_model_config();
+        let display_name = config.display_name();
 
         emit_chat_status(&app, ChatStatus::Loading, Some(&display_name), None);
 
-        ENGINE
-            .load_gguf_model(
-                config,
+        config
+            .load(
                 Some(CHAT_SYSTEM_PROMPT.to_string()),
                 Some(sampling_config()),
             )
