@@ -12,7 +12,7 @@ pub mod inference {
 use app_info::app_build_version;
 use chat::{
     chat_clear_history, chat_get_history, chat_get_status, chat_list_models, chat_load_model,
-    chat_send_message, chat_set_model, chat_unload_model,
+    chat_remove_model, chat_send_message, chat_set_model, chat_unload_model,
 };
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -50,6 +50,7 @@ pub fn run() {
             chat_get_history,
             chat_list_models,
             chat_set_model,
+            chat_remove_model,
             // App metadata
             app_build_version,
         ])

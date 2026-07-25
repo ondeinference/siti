@@ -17,6 +17,7 @@ pub mod command_get_history;
 pub mod command_get_status;
 pub mod command_list_models;
 pub mod command_load_model;
+pub mod command_remove_model;
 pub mod command_send_message;
 pub mod command_set_model;
 pub mod command_unload_model;
@@ -28,6 +29,7 @@ pub use command_get_history::chat_get_history;
 pub use command_get_status::chat_get_status;
 pub use command_list_models::chat_list_models;
 pub use command_load_model::chat_load_model;
+pub use command_remove_model::chat_remove_model;
 pub use command_send_message::chat_send_message;
 pub use command_set_model::chat_set_model;
 pub use command_unload_model::chat_unload_model;
@@ -110,6 +112,8 @@ pub struct ModelInfo {
     pub approx_memory: String,
     /// Approximate on-disk download size in bytes (for display).
     pub size_bytes: Option<u64>,
+    /// Whether the model's weights are already downloaded to the local cache.
+    pub is_downloaded: bool,
     /// Whether this model is the one currently selected for Siti.
     pub is_selected: bool,
 }
@@ -279,6 +283,54 @@ pub(crate) fn resolve_model_id(id: &str) -> Option<ResolvedModel> {
 pub(crate) fn resolved_model_config() -> ResolvedModel {
     let id = SELECTED_MODEL.lock().map(|g| g.clone()).unwrap_or_default();
     resolve_model_id(&id).unwrap_or_else(|| ResolvedModel::Gguf(siti_default_config()))
+}
+
+// ── Download-status detection ────────────────────────────────────────────────
+
+/// Fraction of `expected_size_bytes` that must be present on disk for a model
+/// to count as fully downloaded (mirrors onde's own completeness threshold).
+#[cfg(any(target_os = "macos", target_os = "ios", target_os = "android"))]
+const DOWNLOAD_COMPLETE_THRESHOLD: f64 = 0.99;
+
+/// Sum the byte size of every real file directly and recursively under `path`.
+///
+/// Only used against the HF cache's `blobs/` directory, which holds the actual
+/// downloaded files (not the `snapshots/` symlink/hard-link views), so nothing
+/// is double-counted.
+#[cfg(any(target_os = "macos", target_os = "ios", target_os = "android"))]
+fn blobs_dir_size(path: &std::path::Path) -> u64 {
+    let mut total = 0;
+    if let Ok(entries) = std::fs::read_dir(path) {
+        for entry in entries.flatten() {
+            let p = entry.path();
+            match entry.metadata() {
+                Ok(md) if md.is_dir() => total += blobs_dir_size(&p),
+                Ok(md) => total += md.len(),
+                Err(_) => {}
+            }
+        }
+    }
+    total
+}
+
+/// Whether `id`'s weights are already downloaded to the local HF cache.
+///
+/// A model counts as downloaded when its cache `blobs/` directory holds at
+/// least [`DOWNLOAD_COMPLETE_THRESHOLD`] of the model's expected size, which
+/// excludes partial/interrupted downloads.
+#[cfg(any(target_os = "macos", target_os = "ios", target_os = "android"))]
+pub(crate) fn is_model_downloaded(id: &str, expected_size_bytes: u64) -> bool {
+    if expected_size_bytes == 0 {
+        return false;
+    }
+    match onde::hf_cache::model_cache_path(id) {
+        Some(root) => {
+            let blobs = root.join("blobs");
+            blobs_dir_size(&blobs) as f64
+                >= expected_size_bytes as f64 * DOWNLOAD_COMPLETE_THRESHOLD
+        }
+        None => false,
+    }
 }
 
 /// Return the sampling config for the currently selected model.
