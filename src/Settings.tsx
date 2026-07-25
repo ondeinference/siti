@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import type { ChatStatus, ModelInfo } from "./api";
 import { formatSize, getAppVersion, getBuildVersion } from "./api";
+import { openUrl } from "@tauri-apps/plugin-opener";
 
 interface SettingsProps {
   open: boolean;
@@ -40,6 +41,11 @@ export default function Settings({
   );
   const busy = status === "loading";
   const line = statusLine(status, statusError);
+
+  const handleOpenUrl = (url: string) => (e: React.MouseEvent) => {
+    e.preventDefault();
+    void openUrl(url);
+  };
 
   // Real app version (CFBundleShortVersionString) and build number
   // (CFBundleVersion), read from the bundle rather than hardcoded.
@@ -132,6 +138,32 @@ export default function Settings({
             <div className="settings-row">
               <span className="row-label">Privacy</span>
               <span className="row-value">On-device · private</span>
+            </div>
+          </div>
+        </section>
+
+        <section className="settings-section">
+          <p className="section-label">Contact</p>
+          <div className="settings-card about">
+            <div className="settings-row">
+              <span className="row-label">GitHub</span>
+              <a
+                className="row-value row-link"
+                href="https://github.com/ondeinference/sitiai"
+                onClick={handleOpenUrl("https://github.com/ondeinference/sitiai")}
+              >
+                ondeinference/sitiai
+              </a>
+            </div>
+            <div className="settings-row">
+              <span className="row-label">Website</span>
+              <a
+                className="row-value row-link"
+                href="https://getsiti.5mb.app"
+                onClick={handleOpenUrl("https://getsiti.5mb.app")}
+              >
+                https://getsiti.5mb.app
+              </a>
             </div>
           </div>
           <p className="settings-note">Profoundly personal. Entirely private.</p>

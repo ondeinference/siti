@@ -451,6 +451,15 @@ html, body {
   color: var(--text-secondary);
 }
 
+.row-link {
+  text-decoration: none;
+}
+
+.row-link:hover,
+.row-link:active {
+  color: var(--text-primary);
+}
+
 .select-wrap {
   position: relative;
   display: flex;
