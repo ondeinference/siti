@@ -1,0 +1,15 @@
+[
+  {
+    "relation": [
+      "delegate_permission/common.handle_all_urls",
+      "delegate_permission/common.get_login_creds"
+    ],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "ai.siti.Siti",
+      "sha256_cert_fingerprints": [
+        "25:36:6F:4B:03:5C:9D:B6:9C:E2:6C:1A:65:D9:74:8A:EE:04:6B:EC:32:40:BC:58:2C:65:EA:12:EB:21:40:3B"
+      ]
+    }
+  }
+]
