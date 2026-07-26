@@ -46,7 +46,9 @@ use {
     crate::events::{EVENT_CHAT_REPLY, EVENT_CHAT_STATUS_CHANGED},
     log::error,
     once_cell::sync::Lazy,
-    onde::inference::{ChatEngine, GgufModelConfig, InferenceError, SamplingConfig},
+    onde::inference::{
+        ChatEngine, GgufModelConfig, InferenceError, SamplingConfig, UqffModelConfig,
+    },
     tauri::{AppHandle, Emitter},
 };
 
@@ -197,6 +199,126 @@ pub(crate) fn config_for_model_id(id: &str) -> Option<GgufModelConfig> {
     Some(cfg)
 }
 
+// ── Qwen 3 (UQFF pre-quantised path) ─────────────────────────────────────────
+//
+// UQFF (Universal Quantized File Format) stores pre-quantised weights and loads
+// directly through mistral.rs's `UqffTextModelBuilder`, avoiding the ISQ path's
+// full-precision download + in-memory quantisation spike. onde exposes it via
+// `ChatEngine::load_uqff_model`, which is available on every inference platform
+// (macOS/iOS/Android), so — unlike Gemma ISQ — these are offered on all three.
+//
+// We ship the `mistralrs-community` Qwen 3 UQFF repos: each is self-contained
+// (base `config.json` + tokenizer + `residual.safetensors` + the `q4k` shard),
+// ungated, and in current (post-1.0) UQFF format. `Qwen3ForCausalLM` is a text
+// architecture the UQFF text loader supports, so they load and generate. Only
+// the `q4k-0.uqff` shard (plus the small residual) is downloaded per model, so
+// `expected_size_bytes` counts just those, matching the on-disk footprint.
+
+/// Static metadata for a Qwen 3 UQFF model offered in Siti's model list.
+#[cfg(any(target_os = "macos", target_os = "ios", target_os = "android"))]
+pub(crate) struct UqffModelEntry {
+    /// HuggingFace repo id; also the value passed back to `chat_set_model`.
+    pub id: &'static str,
+    /// Short label shown in the Settings dropdown, e.g. `"Qwen 3 1.7B (UQFF)"`.
+    pub name: &'static str,
+    /// Display name reported by the engine while loaded/loading.
+    pub display_name: &'static str,
+    /// Approximate runtime memory footprint, e.g. `"~1.5 GB (UQFF Q4K)"`.
+    pub approx_memory: &'static str,
+    /// Short description of the model's purpose and footprint.
+    pub description: &'static str,
+    /// Approximate on-disk download size (the `q4k` shard + `residual`) in bytes.
+    pub expected_size_bytes: u64,
+}
+
+/// The Qwen 3 UQFF models Siti can load. Sizes are the measured
+/// `q4k-0.uqff` + `residual.safetensors` totals of each `mistralrs-community`
+/// repo (small config/tokenizer files add a negligible remainder).
+#[cfg(any(target_os = "macos", target_os = "ios", target_os = "android"))]
+pub(crate) const UQFF_MODELS: &[UqffModelEntry] = &[
+    UqffModelEntry {
+        id: "mistralrs-community/Qwen3-0.6B-UQFF",
+        name: "Qwen 3 0.6B (UQFF)",
+        display_name: "Qwen 3 0.6B (UQFF Q4K)",
+        approx_memory: "~0.6 GB (UQFF Q4K)",
+        description: "Qwen 3 0.6B, pre-quantised to 4-bit (UQFF Q4K). Loads directly with no \
+                      on-device quantisation step; the lightest UQFF option.",
+        expected_size_bytes: 646_635_509,
+    },
+    UqffModelEntry {
+        id: "mistralrs-community/Qwen3-1.7B-UQFF",
+        name: "Qwen 3 1.7B (UQFF)",
+        display_name: "Qwen 3 1.7B (UQFF Q4K)",
+        approx_memory: "~1.5 GB (UQFF Q4K)",
+        description: "Qwen 3 1.7B, pre-quantised to 4-bit (UQFF Q4K). Loads directly with no \
+                      on-device quantisation step.",
+        expected_size_bytes: 1_590_429_781,
+    },
+    UqffModelEntry {
+        id: "mistralrs-community/Qwen3-4B-UQFF",
+        name: "Qwen 3 4B (UQFF)",
+        display_name: "Qwen 3 4B (UQFF Q4K)",
+        approx_memory: "~2.9 GB (UQFF Q4K)",
+        description: "Qwen 3 4B, pre-quantised to 4-bit (UQFF Q4K). Loads directly with no \
+                      on-device quantisation step.",
+        expected_size_bytes: 3_040_959_629,
+    },
+    UqffModelEntry {
+        id: "mistralrs-community/Qwen3-4B-Instruct-2507-UQFF",
+        name: "Qwen 3 4B Instruct 2507 (UQFF)",
+        display_name: "Qwen 3 4B Instruct 2507 (UQFF Q4K)",
+        approx_memory: "~2.9 GB (UQFF Q4K)",
+        description: "Qwen 3 4B Instruct (2507 refresh), pre-quantised to 4-bit (UQFF Q4K). \
+                      A non-thinking instruct model that loads directly.",
+        expected_size_bytes: 3_040_959_629,
+    },
+    UqffModelEntry {
+        id: "mistralrs-community/Qwen3-4B-Thinking-2507-UQFF",
+        name: "Qwen 3 4B Thinking 2507 (UQFF)",
+        display_name: "Qwen 3 4B Thinking 2507 (UQFF Q4K)",
+        approx_memory: "~2.9 GB (UQFF Q4K)",
+        description: "Qwen 3 4B Thinking (2507 refresh), pre-quantised to 4-bit (UQFF Q4K). \
+                      Emits a reasoning block before its reply; loads directly.",
+        expected_size_bytes: 3_040_959_629,
+    },
+    UqffModelEntry {
+        id: "mistralrs-community/Qwen3-8B-UQFF",
+        name: "Qwen 3 8B (UQFF)",
+        display_name: "Qwen 3 8B (UQFF Q4K)",
+        approx_memory: "~5.2 GB (UQFF Q4K)",
+        description: "Qwen 3 8B, pre-quantised to 4-bit (UQFF Q4K). Loads directly; needs \
+                      roomier memory (12+ GB recommended).",
+        expected_size_bytes: 5_502_458_509,
+    },
+    UqffModelEntry {
+        id: "mistralrs-community/Qwen3-14B-UQFF",
+        name: "Qwen 3 14B (UQFF)",
+        display_name: "Qwen 3 14B (UQFF Q4K)",
+        approx_memory: "~9.0 GB (UQFF Q4K)",
+        description: "Qwen 3 14B, pre-quantised to 4-bit (UQFF Q4K). The largest UQFF option; \
+                      desktop-class memory (16+ GB) recommended.",
+        expected_size_bytes: 9_426_174_577,
+    },
+];
+
+/// Map a HuggingFace repo id to a loadable [`UqffModelConfig`], or `None` if the
+/// id is not one of the Qwen 3 UQFF models Siti offers.
+///
+/// Every `mistralrs-community` Qwen 3 UQFF repo names its 4-bit shard
+/// `q4k-0.uqff`; passing that single shard is enough for mistral.rs to resolve
+/// the base config, tokenizer, and residual weights.
+#[cfg(any(target_os = "macos", target_os = "ios", target_os = "android"))]
+pub(crate) fn uqff_config_for_model_id(id: &str) -> Option<UqffModelConfig> {
+    let entry = UQFF_MODELS.iter().find(|m| m.id == id)?;
+    Some(UqffModelConfig {
+        model_id: entry.id.to_string(),
+        files: vec!["q4k-0.uqff".to_string()],
+        display_name: entry.display_name.to_string(),
+        approx_memory: entry.approx_memory.to_string(),
+        chat_template: None,
+    })
+}
+
 // ── Gemma (ISQ safetensors path, macOS only) ─────────────────────────────────
 //
 // Gemma cannot be loaded through the GGUF path Siti uses for every other model:
@@ -232,10 +354,12 @@ pub(crate) fn gemma2_2b_isq_config() -> IsqModelConfig {
 }
 
 /// A model selection resolved to the concrete engine config and load path it
-/// needs. Most models are GGUF; Gemma is the sole ISQ model (macOS only).
+/// needs. Most models are GGUF; Qwen 3 UQFF models use the UQFF path (all
+/// platforms), and Gemma is the sole ISQ model (macOS only).
 #[cfg(any(target_os = "macos", target_os = "ios", target_os = "android"))]
 pub(crate) enum ResolvedModel {
     Gguf(GgufModelConfig),
+    Uqff(UqffModelConfig),
     #[cfg(target_os = "macos")]
     Isq(IsqModelConfig),
 }
@@ -246,13 +370,14 @@ impl ResolvedModel {
     pub(crate) fn display_name(&self) -> String {
         match self {
             ResolvedModel::Gguf(c) => c.display_name.clone(),
+            ResolvedModel::Uqff(c) => c.display_name.clone(),
             #[cfg(target_os = "macos")]
             ResolvedModel::Isq(c) => c.display_name.clone(),
         }
     }
 
     /// Load the resolved model into the shared [`ENGINE`], dispatching to the
-    /// GGUF or ISQ load path as appropriate.
+    /// GGUF, UQFF, or ISQ load path as appropriate.
     pub(crate) async fn load(
         self,
         system_prompt: Option<String>,
@@ -260,6 +385,7 @@ impl ResolvedModel {
     ) -> Result<std::time::Duration, InferenceError> {
         match self {
             ResolvedModel::Gguf(c) => ENGINE.load_gguf_model(c, system_prompt, sampling).await,
+            ResolvedModel::Uqff(c) => ENGINE.load_uqff_model(c, system_prompt, sampling).await,
             #[cfg(target_os = "macos")]
             ResolvedModel::Isq(c) => ENGINE.load_isq_model(c, system_prompt, sampling).await,
         }
@@ -273,6 +399,9 @@ pub(crate) fn resolve_model_id(id: &str) -> Option<ResolvedModel> {
     #[cfg(target_os = "macos")]
     if id == GEMMA2_2B_IT_ISQ_ID {
         return Some(ResolvedModel::Isq(gemma2_2b_isq_config()));
+    }
+    if let Some(cfg) = uqff_config_for_model_id(id) {
+        return Some(ResolvedModel::Uqff(cfg));
     }
     config_for_model_id(id).map(ResolvedModel::Gguf)
 }
