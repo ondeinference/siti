@@ -14,7 +14,7 @@ options:
 packages:
   Onde:
     url: https://github.com/ondeinference/onde-swift
-    from: 1.1.0
+    from: 1.2.2
 
 schemes:
   SitiVision:
