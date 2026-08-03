@@ -6,13 +6,28 @@
     <!-- viewport-fit=cover makes the WebView edge-to-edge so the theme colour
          (painted on html/body) extends behind the status bar and home
          indicator, and env(safe-area-inset-*) becomes available for insetting
-         content. -->
+         content.
+
+         The locked scale range is what stops the app from behaving like a web
+         page: mobile Safari ignores `user-scalable=no` for accessibility, but
+         WKWebView and the Android WebView honour it, so pinch and double-tap
+         no longer zoom the UI. Trackpad pinches arrive as separate gesture
+         events and are cancelled in src/native.ts. -->
     <meta
       name="viewport"
-      content="width=device-width, initial-scale=1.0, viewport-fit=cover"
+      content="width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"
     />
     <!-- Let the WebView and its default backdrop follow the system theme. -->
     <meta name="color-scheme" content="light dark" />
+    <!-- Draw the status bar over the (theme-coloured) app rather than filling
+         it with an opaque bar, matching viewport-fit=cover above. -->
+    <meta
+      name="apple-mobile-web-app-status-bar-style"
+      content="black-translucent"
+    />
+    <!-- Stop iOS from turning phone numbers, dates, and addresses in model
+         output into tappable blue "web page" links. -->
+    <meta name="format-detection" content="telephone=no,date=no,address=no,email=no" />
     <meta
       name="theme-color"
       content="#fafafa"
