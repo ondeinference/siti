@@ -7,10 +7,20 @@
 use super::*;
 use tauri::AppHandle;
 
-#[cfg(any(target_os = "macos", target_os = "ios", target_os = "android"))]
+#[cfg(any(
+    target_os = "macos",
+    target_os = "ios",
+    target_os = "android",
+    target_os = "windows"
+))]
 use {log::info, tauri::Emitter};
 
-#[cfg(not(any(target_os = "macos", target_os = "ios", target_os = "android")))]
+#[cfg(not(any(
+    target_os = "macos",
+    target_os = "ios",
+    target_os = "android",
+    target_os = "windows"
+)))]
 use log::debug;
 
 /// Send a user message to Siti and receive an assistant reply.
@@ -27,7 +37,12 @@ use log::debug;
 /// while the command is still running, especially on budget SoCs where
 /// GGUF inference takes 60-300 seconds.  Emitting an event from a spawned
 /// task sidesteps the GC entirely.
-#[cfg(any(target_os = "macos", target_os = "ios", target_os = "android"))]
+#[cfg(any(
+    target_os = "macos",
+    target_os = "ios",
+    target_os = "android",
+    target_os = "windows"
+))]
 #[tauri::command]
 pub async fn chat_send_message(app: AppHandle, message: String) -> Result<(), String> {
     // ── 1. Lazy-load the model if not already cached ──────────────────────
@@ -105,9 +120,14 @@ pub async fn chat_send_message(app: AppHandle, message: String) -> Result<(), St
     Ok(())
 }
 
-#[cfg(not(any(target_os = "macos", target_os = "ios", target_os = "android")))]
+#[cfg(not(any(
+    target_os = "macos",
+    target_os = "ios",
+    target_os = "android",
+    target_os = "windows"
+)))]
 #[tauri::command]
 pub async fn chat_send_message(_app: AppHandle, _message: String) -> Result<(), String> {
-    debug!("Siti chat is only supported on macOS, iOS, and Android for now.");
-    Err("Siti chat is only supported on macOS, iOS, and Android for now.".to_string())
+    debug!("Siti chat is not supported on this platform.");
+    Err("Siti chat is not supported on this platform.".to_string())
 }

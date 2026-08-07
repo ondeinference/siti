@@ -4,11 +4,21 @@
 
 use super::ChatMessagePayload;
 
-#[cfg(any(target_os = "macos", target_os = "ios", target_os = "android"))]
+#[cfg(any(
+    target_os = "macos",
+    target_os = "ios",
+    target_os = "android",
+    target_os = "windows"
+))]
 use {super::ENGINE, onde::inference::ChatRole};
 
 /// Return the full conversation history.
-#[cfg(any(target_os = "macos", target_os = "ios", target_os = "android"))]
+#[cfg(any(
+    target_os = "macos",
+    target_os = "ios",
+    target_os = "android",
+    target_os = "windows"
+))]
 #[tauri::command]
 pub async fn chat_get_history() -> Vec<ChatMessagePayload> {
     ENGINE
@@ -26,7 +36,12 @@ pub async fn chat_get_history() -> Vec<ChatMessagePayload> {
         .collect()
 }
 
-#[cfg(not(any(target_os = "macos", target_os = "ios", target_os = "android")))]
+#[cfg(not(any(
+    target_os = "macos",
+    target_os = "ios",
+    target_os = "android",
+    target_os = "windows"
+)))]
 #[tauri::command]
 pub async fn chat_get_history() -> Vec<ChatMessagePayload> {
     Vec::new()
