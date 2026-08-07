@@ -8,6 +8,7 @@
 #   4. Override — copy src-tauri/gen-override/android/* into gen/android/
 #   5. Keystore — patch storeFile path in gen/android/keystore.properties
 #   6. Build    — cargo tauri android build --aab
+#   7. Verify   — assert the merged manifest still launches and reaches the net
 #
 # The build produces a signed universal .aab ready to upload to the Play
 # Console. versionCode is injected at init/build time as YYYYMMDDhh (UTC) via a
@@ -15,6 +16,8 @@
 #
 # Every configurable value has a hardcoded default that can be overridden by
 # setting the corresponding environment variable before invoking the script.
+# KEYSTORE_PATH has no default and is read from an untracked .env.playstore if
+# present — copy .env.playstore.example to get started.
 #
 # Usage:
 #   ./scripts/build-android.sh              # full pipeline
@@ -24,6 +27,7 @@
 #   ./scripts/build-android.sh override     # copy gen-override files only
 #   ./scripts/build-android.sh keystore     # patch keystore.properties only
 #   ./scripts/build-android.sh build        # android build only
+#   ./scripts/build-android.sh verify       # check the merged manifest only
 #
 #   make psmobile                           # full pipeline via Makefile
 #   make psmobile-build
@@ -38,13 +42,37 @@ GEN_ANDROID_DIR="${REPO_ROOT}/src-tauri/gen/android"
 GEN_OVERRIDE_DIR="${REPO_ROOT}/src-tauri/gen-override/android"
 KEYSTORE_PROPERTIES="${GEN_ANDROID_DIR}/keystore.properties"
 
+# Auto-load the untracked .env.playstore (upload keystore path) so
+# `make psmobile` works without the caller exporting it first. Mirrors how
+# build-ios.sh / build-macos.sh / build-visionos.sh load .env.appstore. See
+# .env.playstore.example for the expected keys.
+#
+# Sourcing assigns unconditionally, which would let the file quietly beat an
+# inline `KEYSTORE_PATH=… make psmobile`. Stash the caller's value first and put
+# it back afterwards, so an explicit override always wins over the file.
+KEYSTORE_PATH_FROM_CALLER="${KEYSTORE_PATH:-}"
+
+if [[ -f "${REPO_ROOT}/.env.playstore" ]]; then
+  set -a
+  # shellcheck disable=SC1091
+  . "${REPO_ROOT}/.env.playstore"
+  set +a
+fi
+
+if [[ -n "$KEYSTORE_PATH_FROM_CALLER" ]]; then
+  KEYSTORE_PATH="$KEYSTORE_PATH_FROM_CALLER"
+fi
+
 # ── Overridable config ────────────────────────────────────────────────────────
 
 # Absolute path to the upload keystore (.jks). Required — no default, so that no
-# personal path is baked into the public repo. Copy
-# src-tauri/gen-override/android/keystore.properties.example to keystore.properties
-# and set storeFile, or export KEYSTORE_PATH before running this script.
-KEYSTORE_PATH="${KEYSTORE_PATH:?set KEYSTORE_PATH to the absolute path of your upload-keystore.jks}"
+# personal path is baked into the public repo. Set it in .env.playstore (copy
+# .env.playstore.example), or export it before running this script.
+#
+# Note this is the *only* way to point the build at a keystore: do_keystore
+# rewrites storeFile= in gen/android/keystore.properties from this value, so
+# editing that file by hand has no effect.
+KEYSTORE_PATH="${KEYSTORE_PATH:?set KEYSTORE_PATH in .env.playstore (see .env.playstore.example) or export it}"
 
 # versionCode: YYYYMMDDhh (UTC) — same UTC timestamp base as the iOS bundleVersion
 #   Integer form of the date+hour; fits the Play Store 32-bit limit (≤ 2,100,000,000) through 2099
@@ -61,7 +89,7 @@ fail() { echo "❌  $*" >&2; exit 1; }
 # ── Steps ─────────────────────────────────────────────────────────────────────
 
 do_clean() {
-  step "1/6  Clean gen/android"
+  step "1/7  Clean gen/android"
 
   echo "🗑   rm -rf ${GEN_ANDROID_DIR}"
   rm -rf "${GEN_ANDROID_DIR}"
@@ -69,7 +97,7 @@ do_clean() {
 }
 
 do_init() {
-  step "2/6  Android init"
+  step "2/7  Android init"
 
   [[ -f "$ANDROID_CONFIG" ]] || fail "Android config not found: $ANDROID_CONFIG"
 
@@ -85,14 +113,14 @@ do_init() {
 }
 
 do_icons() {
-  step "3/6  Generate icons"
+  step "3/7  Generate icons"
 
   pnpm gim
   ok "Icons generated"
 }
 
 do_override() {
-  step "4/6  Apply gen-override/android"
+  step "4/7  Apply gen-override/android"
 
   # Nothing to do if the override directory contains only .keep files.
   OVERRIDE_COUNT="$(find "${GEN_OVERRIDE_DIR}" -not -name '.keep' -not -type d | wc -l | tr -d ' ')"
@@ -113,7 +141,7 @@ do_override() {
 }
 
 do_keystore() {
-  step "5/6  Patch keystore.properties"
+  step "5/7  Patch keystore.properties"
 
   [[ -f "$KEYSTORE_PROPERTIES" ]] || fail "keystore.properties not found: ${KEYSTORE_PROPERTIES}\n       Run 'override' step first."
   [[ -f "$KEYSTORE_PATH" ]] || fail "Keystore file not found: ${KEYSTORE_PATH}\n       Set KEYSTORE_PATH env var to the correct .jks path."
@@ -127,7 +155,7 @@ do_keystore() {
 }
 
 do_build() {
-  step "6/6  Build"
+  step "6/7  Build"
 
   [[ -f "$ANDROID_CONFIG" ]] || fail "Android config not found: $ANDROID_CONFIG"
 
@@ -148,6 +176,54 @@ do_build() {
   fi
 }
 
+do_verify() {
+  step "7/7  Verify merged manifest"
+
+  # Guards the failure mode that shipped in 1.0.1: an override file copied over
+  # app/src/main/AndroidManifest.xml replaced Tauri's generated manifest instead
+  # of merging with it, so the released .aab had no MAIN/LAUNCHER filter (the
+  # Play Store offered Install but no Open, and no icon appeared in the drawer)
+  # and no INTERNET permission (no model could ever download). Both are silent
+  # at build time — nothing fails, the .aab just cannot be launched — so assert
+  # on the post-merge manifest that actually goes into the bundle.
+  MERGED_MANIFEST="$(find "${GEN_ANDROID_DIR}/app/build/intermediates" \
+    -path '*bundle_manifest*universalRelease*' -name 'AndroidManifest.xml' \
+    -print -quit 2>/dev/null || true)"
+
+  [[ -n "$MERGED_MANIFEST" ]] || fail "No merged release manifest found — run the 'build' step first."
+
+  echo "🔍  ${MERGED_MANIFEST#"${REPO_ROOT}/"}"
+
+  # "<what to look for>|<what its absence breaks>"
+  REQUIRED=(
+    'android.intent.action.MAIN|no launcher entry — Play Store shows Install but no Open'
+    'android.intent.category.LAUNCHER|no icon in the app drawer'
+    'android.permission.INTERNET|model downloads fail'
+    'android:icon=|no launcher icon'
+    'android:label=|no app name under the icon'
+  )
+
+  MISSING=0
+  for entry in "${REQUIRED[@]}"; do
+    needle="${entry%%|*}"
+    consequence="${entry#*|}"
+    if grep -qF "$needle" "$MERGED_MANIFEST"; then
+      echo "   ✓ ${needle}"
+    else
+      echo "   ✗ ${needle} — ${consequence}" >&2
+      MISSING=1
+    fi
+  done
+
+  [[ "$MISSING" -eq 0 ]] || fail "Merged manifest is missing required entries (see above).
+       Almost always caused by a file in gen-override/android/app/src/main/
+       replacing a generated file rather than adding to it. Manifest additions
+       belong in a build-type source set such as app/src/release/, which AGP's
+       manifest merger folds into the generated one."
+
+  ok "Manifest is launchable"
+}
+
 # ── Entry point ───────────────────────────────────────────────────────────────
 
 STEP="${1:-all}"
@@ -159,6 +235,7 @@ case "$STEP" in
   override) do_override ;;
   keystore) do_keystore ;;
   build)    do_build    ;;
+  verify)   do_verify   ;;
   all)
     do_clean
     do_init
@@ -166,11 +243,12 @@ case "$STEP" in
     do_override
     do_keystore
     do_build
+    do_verify
     echo ""
     echo "🎉  Pipeline complete: Siti AI Android .aab is ready for Play Store upload."
     ;;
   *)
-    echo "Usage: $0 [clean|init|icons|override|keystore|build|all]" >&2
+    echo "Usage: $0 [clean|init|icons|override|keystore|build|verify|all]" >&2
     exit 1
     ;;
 esac

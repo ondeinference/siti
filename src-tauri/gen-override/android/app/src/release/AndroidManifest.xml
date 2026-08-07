@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  App Links overlay — release builds only.
+
+  This is NOT the app manifest. It is a build-type source set that AGP's
+  manifest merger folds into the generated app/src/main/AndroidManifest.xml,
+  adding one intent-filter to the existing MainActivity and changing nothing
+  else.
+
+  It lives here, and not in src/main/, because scripts/build-android.sh applies
+  gen-override with `rsync` — a file copy, not an XML merge. An override placed
+  at app/src/main/AndroidManifest.xml *replaces* the manifest Tauri generates,
+  silently dropping MAIN/LAUNCHER, INTERNET, the launcher icon, and the
+  FileProvider. That shipped once: 1.0.1 installed from the Play Store with no
+  launcher entry, so the Store showed no "Open" button. Keep additions in a
+  source set the merger owns, and let Tauri's generated manifest stay untouched.
+
+  The App Links filter must stay in its own <intent-filter>. Android evaluates a
+  filter as a unit — action AND category AND data must all match — so a filter
+  carrying a <data> element can never match the launcher's ACTION_MAIN intent,
+  which has no URI. Merging the two sets of tags into one filter reproduces the
+  same "no Open button" bug.
+
+  Verification also needs https://getsiti.5mb.app/.well-known/assetlinks.json to
+  serve this app's package name and signing-certificate SHA-256 fingerprint,
+  otherwise autoVerify fails and links fall back to a disambiguation dialog.
+-->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <application>
+        <activity android:name=".MainActivity">
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data
+                    android:scheme="https"
+                    android:host="getsiti.5mb.app" />
+            </intent-filter>
+        </activity>
+    </application>
+</manifest>

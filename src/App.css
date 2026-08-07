@@ -1,7 +1,23 @@
+/* ── Native shell reset ───────────────────────────────────────────────────
+   Everything below the box-sizing line exists to make the WebView stop
+   behaving like a browser. `touch-action` is not inherited, so the
+   double-tap-to-zoom suppression has to be declared on every element rather
+   than once on <body>. Gesture-level zoom, the context menu, and drag-out are
+   handled in src/native.ts; these are the parts CSS owns. */
 *, *::before, *::after {
   box-sizing: border-box;
   margin: 0;
   padding: 0;
+
+  /* `manipulation` keeps panning and pinch-to-scroll but drops the 300ms
+     double-tap-to-zoom gesture, which also removes the tap delay. */
+  touch-action: manipulation;
+  /* No grey flash behind taps — native controls highlight themselves. */
+  -webkit-tap-highlight-color: transparent;
+  /* Long-press must not raise the iOS callout bar or the link preview. */
+  -webkit-touch-callout: none;
+  /* Text and icons are not draggable objects in a native app. */
+  -webkit-user-drag: none;
 }
 
 :root {
@@ -53,9 +69,26 @@ html, body {
      behind the status bar and home indicator, so the safe areas blend with the
      app instead of showing the native (dark) backdrop. */
   background: var(--bg);
+  /* Belt and braces against the document rubber-banding: `overflow: hidden`
+     means there is nothing to scroll, and `overscroll-behavior: none` stops
+     WKWebView bouncing (and the Android WebView flashing its overscroll glow)
+     when a scroll inside .messages reaches its end. Scroll bounce *within* the
+     message list is kept — that one is native. */
+  overflow: hidden;
   overscroll-behavior: none;
-  -webkit-tap-highlight-color: transparent;
-  touch-action: manipulation;
+  /* Never re-flow text on rotation the way mobile browsers do. */
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+body {
+  /* Pin the document so a focused input can never scroll the whole app frame
+     out from under the status bar — a WebKit habit with no native equivalent. */
+  position: fixed;
+  inset: 0;
+  /* App chrome is not selectable text; the parts that are opt back in below. */
+  user-select: none;
+  -webkit-user-select: none;
 }
 
 #root {
@@ -65,10 +98,31 @@ html, body {
 .app {
   display: flex;
   flex-direction: column;
-  height: 100dvh;
+  /* --keyboard-inset is published by src/native.ts from visualViewport: on iOS
+     the WebView is not resized for the keyboard, so the frame has to shrink
+     itself to keep the composer visible, the way a native view would. */
+  height: calc(100dvh - var(--keyboard-inset, 0px));
   background: var(--bg);
   color: var(--text-primary);
-  user-select: none;
+}
+
+/* macOS and Windows apps show the arrow cursor over controls; the pointing
+   hand is a browser convention for hyperlinks. Text fields keep the I-beam.
+   Descendant selectors are deliberate: they have to outrank the per-control
+   `cursor: pointer` class rules further down, which a media query alone does
+   not do. */
+@media (hover: hover) and (pointer: fine) {
+  .app button,
+  .app select,
+  .app a {
+    cursor: default;
+  }
+}
+
+/* Keep the keyboard-navigation focus ring, drop the one browsers paint after a
+   plain click. */
+:focus:not(:focus-visible) {
+  outline: none;
 }
 
 /* Header */
@@ -190,8 +244,12 @@ html, body {
   font-size: 14px;
   line-height: 1.55;
   word-break: break-word;
+  /* Message text is real content: allow selection and the system long-press
+     menu (Copy / Look Up / Share), which is the native affordance here. */
   user-select: text;
   -webkit-user-select: text;
+  -webkit-touch-callout: default;
+  cursor: text;
 }
 
 .message-row.user .bubble {
@@ -232,8 +290,13 @@ html, body {
 
 /* Input area */
 .input-area {
+  /* The home-indicator inset only needs clearing while the indicator is
+     visible; once the keyboard covers it, subtracting --keyboard-inset drives
+     the bottom padding back to the plain 20px so the composer sits flush on
+     the keyboard instead of floating above a phantom gap. */
   padding: 16px max(24px, env(safe-area-inset-right))
-    max(20px, env(safe-area-inset-bottom)) max(24px, env(safe-area-inset-left));
+    max(20px, calc(env(safe-area-inset-bottom) - var(--keyboard-inset, 0px)))
+    max(24px, env(safe-area-inset-left));
   border-top: 1px solid var(--border);
   background: var(--bg);
   flex-shrink: 0;
@@ -269,6 +332,8 @@ html, body {
   padding: 0;
   user-select: text;
   -webkit-user-select: text;
+  /* The composer needs the system edit menu (Select / Paste). */
+  -webkit-touch-callout: default;
 }
 
 .input-field::placeholder {
@@ -313,6 +378,14 @@ html, body {
   letter-spacing: 0.1px;
 }
 
+/* A hardware-keyboard hint under a touch composer is pure web-form residue —
+   no native chat app on a phone explains its Return key. */
+@media (pointer: coarse) {
+  .input-hint {
+    display: none;
+  }
+}
+
 /* Header actions (status dot + settings) */
 .header-actions {
   display: flex;
@@ -336,7 +409,6 @@ html, body {
   justify-content: center;
   border-radius: var(--radius-sm);
   cursor: pointer;
-  -webkit-tap-highlight-color: transparent;
   transition: color 0.15s, background 0.15s, transform 0.1s;
 }
 
@@ -404,6 +476,8 @@ html, body {
   flex: 1;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
+  /* Reaching either end must not chain the scroll out to the document. */
+  overscroll-behavior-y: contain;
   padding: 8px 16px max(24px, env(safe-area-inset-bottom));
 }
 
