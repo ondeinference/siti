@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import type { ChatStatus, ModelInfo } from "./api";
 import { formatSize, getAppVersion, getBuildVersion } from "./api";
+import { openUrl } from "@tauri-apps/plugin-opener";
 
 interface SettingsProps {
   open: boolean;
@@ -8,7 +9,57 @@ interface SettingsProps {
   status: ChatStatus;
   statusError: string | null;
   onSelectModel: (id: string) => void;
+  onRemoveModel: (id: string) => void;
   onClose: () => void;
+}
+
+// Down-arrow-into-tray: download action for a not-yet-downloaded model.
+function DownloadIcon() {
+  return (
+    <svg viewBox="0 0 20 20" width="18" height="18" aria-hidden>
+      <path
+        d="M10 3v9m0 0 3.5-3.5M10 12 6.5 8.5M4 14.5V16a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1v-1.5"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.6"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+// Trash: remove a downloaded model's weights from disk.
+function TrashIcon() {
+  return (
+    <svg viewBox="0 0 20 20" width="18" height="18" aria-hidden>
+      <path
+        d="M4 6h12M8 6V4.5a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1V6m1.5 0-.6 9a1.5 1.5 0 0 1-1.5 1.4H8.1A1.5 1.5 0 0 1 6.6 15L6 6m2.5 2.5v5m3-5v5"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.6"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+// Filled check badge: model is downloaded and available offline.
+function DownloadedIcon() {
+  return (
+    <svg viewBox="0 0 20 20" width="18" height="18" aria-hidden>
+      <circle cx="10" cy="10" r="8" fill="currentColor" />
+      <path
+        d="m6.5 10.2 2.4 2.4 4.6-4.8"
+        fill="none"
+        stroke="var(--surface, #1c1c1e)"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
 }
 
 function statusLine(status: ChatStatus, error: string | null) {
@@ -32,6 +83,7 @@ export default function Settings({
   status,
   statusError,
   onSelectModel,
+  onRemoveModel,
   onClose,
 }: SettingsProps) {
   const selected = useMemo(
@@ -40,6 +92,11 @@ export default function Settings({
   );
   const busy = status === "loading";
   const line = statusLine(status, statusError);
+
+  const handleOpenUrl = (url: string) => (e: React.MouseEvent) => {
+    e.preventDefault();
+    void openUrl(url);
+  };
 
   // Real app version (CFBundleShortVersionString) and build number
   // (CFBundleVersion), read from the bundle rather than hardcoded.
@@ -123,6 +180,60 @@ export default function Settings({
         </section>
 
         <section className="settings-section">
+          <p className="section-label">Supported Models</p>
+          <div className="settings-card model-list">
+            {models.length === 0 && (
+              <div className="settings-row">
+                <span className="row-value">No models available.</span>
+              </div>
+            )}
+            {models.map((m) => (
+              <div className="model-list-row" key={m.id}>
+                <div className="model-list-info">
+                  <span className="model-list-name">{m.name}</span>
+                  <span className="model-list-meta">
+                    {m.org}
+                    {m.size_bytes ? ` · ${formatSize(m.size_bytes)}` : ""}
+                  </span>
+                </div>
+                <div className="model-list-actions">
+                  {m.is_downloaded ? (
+                    <>
+                      <span
+                        className="model-downloaded"
+                        title="Downloaded"
+                        aria-label="Downloaded"
+                      >
+                        <DownloadedIcon />
+                      </span>
+                      <button
+                        className="model-action remove"
+                        onClick={() => onRemoveModel(m.id)}
+                        disabled={busy}
+                        title="Remove download"
+                        aria-label={`Remove ${m.name}`}
+                      >
+                        <TrashIcon />
+                      </button>
+                    </>
+                  ) : (
+                    <button
+                      className="model-action download"
+                      onClick={() => onSelectModel(m.id)}
+                      disabled={busy}
+                      title="Download"
+                      aria-label={`Download ${m.name}`}
+                    >
+                      <DownloadIcon />
+                    </button>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        <section className="settings-section">
           <p className="section-label">About</p>
           <div className="settings-card about">
             <div className="settings-row">
@@ -132,6 +243,32 @@ export default function Settings({
             <div className="settings-row">
               <span className="row-label">Privacy</span>
               <span className="row-value">On-device · private</span>
+            </div>
+          </div>
+        </section>
+
+        <section className="settings-section">
+          <p className="section-label">Contact</p>
+          <div className="settings-card about">
+            <div className="settings-row">
+              <span className="row-label">GitHub</span>
+              <a
+                className="row-value row-link"
+                href="https://github.com/ondeinference/sitiai"
+                onClick={handleOpenUrl("https://github.com/ondeinference/sitiai")}
+              >
+                ondeinference/sitiai
+              </a>
+            </div>
+            <div className="settings-row">
+              <span className="row-label">Website</span>
+              <a
+                className="row-value row-link"
+                href="https://getsiti.5mb.app"
+                onClick={handleOpenUrl("https://getsiti.5mb.app")}
+              >
+                https://getsiti.5mb.app
+              </a>
             </div>
           </div>
           <p className="settings-note">Profoundly personal. Entirely private.</p>

@@ -109,7 +109,7 @@ Byggd med modern nativ teknik för en snabb och lätt upplevelse på din Windows
 
 Prestandaförbättringar och buggfixar ingår i den här versionen.
 
-## Search Terms (7 terms, max 30 characters each)
+## Search Terms (7 terms, max 40 characters each, max 21 words total)
 1. AI-assistent
 2. privat AI
 3. offline AI-chatt

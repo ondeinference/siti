@@ -8,5 +8,10 @@
         <array>
             <string>group.com.ondeinference.apps</string>
         </array>
+        <key>com.apple.developer.associated-domains</key>
+        <array>
+            <string>applinks:getsiti.5mb.app</string>
+            <string>webcredentials:getsiti.5mb.app</string>
+        </array>
     </dict>
 </plist>

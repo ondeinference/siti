@@ -21,12 +21,12 @@ export default function AboutPage() {
           that up.
         </p>
         <p>
-          Most assistants send everything you type to a remote server. Siti is
+          Most assistants send everything you type to a remote server. Siti AI is
           designed to keep your data on your device instead. The name is a wink
           at the assistant you already know, rebuilt around privacy.
         </p>
         <p>
-          Siti is a sibling project to{" "}
+          Siti AI is a sibling project to{" "}
           <a
             href="https://apps.apple.com/se/app/rumi-learn-persian/id6753832408?l=en-GB"
             target="_blank"

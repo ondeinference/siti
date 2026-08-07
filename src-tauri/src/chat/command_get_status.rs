@@ -4,11 +4,21 @@
 
 use super::ChatStatusResponse;
 
-#[cfg(any(target_os = "macos", target_os = "ios", target_os = "android"))]
+#[cfg(any(
+    target_os = "macos",
+    target_os = "ios",
+    target_os = "android",
+    target_os = "windows"
+))]
 use {super::ENGINE, crate::constants::ChatStatus, onde::inference::EngineStatus};
 
 /// Get the current status of the chat model and conversation.
-#[cfg(any(target_os = "macos", target_os = "ios", target_os = "android"))]
+#[cfg(any(
+    target_os = "macos",
+    target_os = "ios",
+    target_os = "android",
+    target_os = "windows"
+))]
 #[tauri::command]
 pub async fn chat_get_status() -> ChatStatusResponse {
     let info = ENGINE.info().await;
@@ -27,7 +37,12 @@ pub async fn chat_get_status() -> ChatStatusResponse {
     }
 }
 
-#[cfg(not(any(target_os = "macos", target_os = "ios", target_os = "android")))]
+#[cfg(not(any(
+    target_os = "macos",
+    target_os = "ios",
+    target_os = "android",
+    target_os = "windows"
+)))]
 #[tauri::command]
 pub async fn chat_get_status() -> ChatStatusResponse {
     use crate::constants::ChatStatus;

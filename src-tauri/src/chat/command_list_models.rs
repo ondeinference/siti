@@ -27,18 +27,23 @@ fn sanitize_description(desc: &str) -> String {
         .replace("siGit Code", "coding tasks")
 }
 
-/// On Android the catalogue text is already accurate, so pass it through.
-#[cfg(target_os = "android")]
+/// On non-Apple builds the catalogue text is already accurate, so pass it through.
+#[cfg(any(target_os = "android", target_os = "windows"))]
 fn sanitize_description(desc: &str) -> String {
     desc.to_string()
 }
 
 /// List the supported on-device models, smallest first, with the currently
 /// selected model marked. Used to populate the Settings model dropdown.
-#[cfg(any(target_os = "macos", target_os = "ios", target_os = "android"))]
+#[cfg(any(
+    target_os = "macos",
+    target_os = "ios",
+    target_os = "android",
+    target_os = "windows"
+))]
 #[tauri::command]
 pub async fn chat_list_models() -> Vec<ModelInfo> {
-    use super::{config_for_model_id, SELECTED_MODEL};
+    use super::{config_for_model_id, is_model_downloaded, SELECTED_MODEL};
 
     let selected = SELECTED_MODEL.lock().map(|g| g.clone()).unwrap_or_default();
 
@@ -53,19 +58,49 @@ pub async fn chat_list_models() -> Vec<ModelInfo> {
                 description: sanitize_description(info.description),
                 approx_memory: cfg.approx_memory,
                 size_bytes: Some(info.expected_size_bytes),
+                is_downloaded: is_model_downloaded(info.id, info.expected_size_bytes),
                 is_selected: info.id == selected,
             })
         })
         .collect();
+
+    // Gemma is not in onde's GGUF catalogue: mistral.rs's GGUF loader has no
+    // Gemma architecture, so Gemma can only load via the ISQ (safetensors)
+    // path, which is Metal-only. Offer it on macOS exclusively.
+    #[cfg(target_os = "macos")]
+    {
+        use super::{gemma2_2b_isq_config, GEMMA2_2B_IT_ISQ_ID};
+        const GEMMA2_2B_EXPECTED_BYTES: u64 = 5_228_717_512;
+        let cfg = gemma2_2b_isq_config();
+        models.push(ModelInfo {
+            id: GEMMA2_2B_IT_ISQ_ID.to_string(),
+            name: "Gemma 2 2B (ISQ)".to_string(),
+            org: "Google".to_string(),
+            description: sanitize_description(
+                "Google's Gemma 2 2B Instruct, quantised on-device to 4-bit (~1.6 GB). \
+                 Loaded from safetensors via ISQ; requires 8+ GB RAM.",
+            ),
+            approx_memory: cfg.approx_memory,
+            // Full bf16 safetensors download before in-situ quantisation (~5.2 GB).
+            size_bytes: Some(GEMMA2_2B_EXPECTED_BYTES),
+            is_downloaded: is_model_downloaded(GEMMA2_2B_IT_ISQ_ID, GEMMA2_2B_EXPECTED_BYTES),
+            is_selected: GEMMA2_2B_IT_ISQ_ID == selected,
+        });
+    }
 
     // Smallest (most device-friendly) first.
     models.sort_by_key(|m| m.size_bytes.unwrap_or(u64::MAX));
     models
 }
 
-#[cfg(not(any(target_os = "macos", target_os = "ios", target_os = "android")))]
+#[cfg(not(any(
+    target_os = "macos",
+    target_os = "ios",
+    target_os = "android",
+    target_os = "windows"
+)))]
 #[tauri::command]
 pub async fn chat_list_models() -> Vec<ModelInfo> {
-    log::debug!("On-device models are only supported on macOS, iOS, and Android.");
+    log::debug!("On-device models are not supported on this platform.");
     Vec::new()
 }

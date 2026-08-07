@@ -1,0 +1,15 @@
+{
+  "applinks": {
+    "details": [
+      {
+        "appIDs": ["2TQF86ZACD.ai.siti.Siti"],
+        "components": [
+          { "/": "/*", "comment": "Open all site links in the app" }
+        ]
+      }
+    ]
+  },
+  "webcredentials": {
+    "apps": ["2TQF86ZACD.ai.siti.Siti"]
+  }
+}
