@@ -21,7 +21,7 @@ jobs:
     # signed .msi/.exe still ship.
     env:
       MSIX_PUBLISHER: ${{ secrets.MSIX_PUBLISHER }}
-      MSIX_IDENTITY_NAME: ${{ secrets.MSIX_SITI_IDENTITY_NAME }}
+      MSIX_IDENTITY_NAME: ${{ secrets.MSIX_IDENTITY_NAME }}
     steps:
       - uses: actions/checkout@v7
 
