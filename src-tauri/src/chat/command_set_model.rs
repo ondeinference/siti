@@ -9,7 +9,12 @@
 
 use tauri::AppHandle;
 
-#[cfg(any(target_os = "macos", target_os = "ios", target_os = "android"))]
+#[cfg(any(
+    target_os = "macos",
+    target_os = "ios",
+    target_os = "android",
+    target_os = "windows"
+))]
 use {
     super::{
         emit_chat_status, fmt_duration, resolve_model_id, resolved_model_config, sampling_config,
@@ -22,7 +27,12 @@ use {
 /// Switch Siti to the model identified by `model_id` (a HuggingFace repo id
 /// from `chat_list_models`). The new model is loaded asynchronously; watch the
 /// `chat_status_changed` event for `Loading` → `Ready`/`Error`.
-#[cfg(any(target_os = "macos", target_os = "ios", target_os = "android"))]
+#[cfg(any(
+    target_os = "macos",
+    target_os = "ios",
+    target_os = "android",
+    target_os = "windows"
+))]
 #[tauri::command]
 pub async fn chat_set_model(app: AppHandle, model_id: String) -> Result<(), String> {
     // ── 1. Validate & resolve the requested model ────────────────────────
@@ -79,9 +89,14 @@ pub async fn chat_set_model(app: AppHandle, model_id: String) -> Result<(), Stri
     Ok(())
 }
 
-#[cfg(not(any(target_os = "macos", target_os = "ios", target_os = "android")))]
+#[cfg(not(any(
+    target_os = "macos",
+    target_os = "ios",
+    target_os = "android",
+    target_os = "windows"
+)))]
 #[tauri::command]
 pub async fn chat_set_model(_app: AppHandle, _model_id: String) -> Result<(), String> {
-    log::debug!("Model switching is only supported on macOS, iOS, and Android.");
-    Err("Model switching is only supported on macOS, iOS, and Android for now.".to_string())
+    log::debug!("Model switching is not supported on this platform.");
+    Err("Model switching is not supported on this platform.".to_string())
 }

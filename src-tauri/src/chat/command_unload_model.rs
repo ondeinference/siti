@@ -2,7 +2,12 @@
 
 use {log::debug, tauri::AppHandle};
 
-#[cfg(any(target_os = "macos", target_os = "ios", target_os = "android"))]
+#[cfg(any(
+    target_os = "macos",
+    target_os = "ios",
+    target_os = "android",
+    target_os = "windows"
+))]
 use {
     super::{emit_chat_status, resolved_model_config, ENGINE},
     crate::constants::ChatStatus,
@@ -10,7 +15,12 @@ use {
 };
 
 /// Unload the chat model from memory to free resources.
-#[cfg(any(target_os = "macos", target_os = "ios", target_os = "android"))]
+#[cfg(any(
+    target_os = "macos",
+    target_os = "ios",
+    target_os = "android",
+    target_os = "windows"
+))]
 #[tauri::command]
 pub async fn chat_unload_model(app: AppHandle) -> Result<String, String> {
     if ENGINE.is_loaded().await {
@@ -25,9 +35,14 @@ pub async fn chat_unload_model(app: AppHandle) -> Result<String, String> {
     }
 }
 
-#[cfg(not(any(target_os = "macos", target_os = "ios", target_os = "android")))]
+#[cfg(not(any(
+    target_os = "macos",
+    target_os = "ios",
+    target_os = "android",
+    target_os = "windows"
+)))]
 #[tauri::command]
 pub async fn chat_unload_model(_app: AppHandle) -> Result<String, String> {
-    debug!("Chat model is only supported on macOS, iOS, and Android.");
+    debug!("Chat model is not supported on this platform.");
     Ok("No chat model was loaded.".to_string())
 }

@@ -6,7 +6,12 @@
 
 use tauri::AppHandle;
 
-#[cfg(any(target_os = "macos", target_os = "ios", target_os = "android"))]
+#[cfg(any(
+    target_os = "macos",
+    target_os = "ios",
+    target_os = "android",
+    target_os = "windows"
+))]
 use {
     super::{emit_chat_status, resolved_model_config, ENGINE, SELECTED_MODEL},
     crate::constants::ChatStatus,
@@ -15,7 +20,12 @@ use {
 
 /// Delete the locally cached weights for `model_id` (a HuggingFace repo id from
 /// `chat_list_models`). Unloads the model first if it is currently loaded.
-#[cfg(any(target_os = "macos", target_os = "ios", target_os = "android"))]
+#[cfg(any(
+    target_os = "macos",
+    target_os = "ios",
+    target_os = "android",
+    target_os = "windows"
+))]
 #[tauri::command]
 pub async fn chat_remove_model(app: AppHandle, model_id: String) -> Result<String, String> {
     // If we're deleting the model that's currently loaded/selected, unload it
@@ -43,9 +53,14 @@ pub async fn chat_remove_model(app: AppHandle, model_id: String) -> Result<Strin
     Ok(msg)
 }
 
-#[cfg(not(any(target_os = "macos", target_os = "ios", target_os = "android")))]
+#[cfg(not(any(
+    target_os = "macos",
+    target_os = "ios",
+    target_os = "android",
+    target_os = "windows"
+)))]
 #[tauri::command]
 pub async fn chat_remove_model(_app: AppHandle, _model_id: String) -> Result<String, String> {
-    log::debug!("Model management is only supported on macOS, iOS, and Android.");
-    Err("Model management is only supported on macOS, iOS, and Android for now.".to_string())
+    log::debug!("Model management is not supported on this platform.");
+    Err("Model management is not supported on this platform.".to_string())
 }

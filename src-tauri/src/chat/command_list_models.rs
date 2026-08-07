@@ -27,15 +27,20 @@ fn sanitize_description(desc: &str) -> String {
         .replace("siGit Code", "coding tasks")
 }
 
-/// On Android the catalogue text is already accurate, so pass it through.
-#[cfg(target_os = "android")]
+/// On non-Apple builds the catalogue text is already accurate, so pass it through.
+#[cfg(any(target_os = "android", target_os = "windows"))]
 fn sanitize_description(desc: &str) -> String {
     desc.to_string()
 }
 
 /// List the supported on-device models, smallest first, with the currently
 /// selected model marked. Used to populate the Settings model dropdown.
-#[cfg(any(target_os = "macos", target_os = "ios", target_os = "android"))]
+#[cfg(any(
+    target_os = "macos",
+    target_os = "ios",
+    target_os = "android",
+    target_os = "windows"
+))]
 #[tauri::command]
 pub async fn chat_list_models() -> Vec<ModelInfo> {
     use super::{config_for_model_id, is_model_downloaded, SELECTED_MODEL};
@@ -88,9 +93,14 @@ pub async fn chat_list_models() -> Vec<ModelInfo> {
     models
 }
 
-#[cfg(not(any(target_os = "macos", target_os = "ios", target_os = "android")))]
+#[cfg(not(any(
+    target_os = "macos",
+    target_os = "ios",
+    target_os = "android",
+    target_os = "windows"
+)))]
 #[tauri::command]
 pub async fn chat_list_models() -> Vec<ModelInfo> {
-    log::debug!("On-device models are only supported on macOS, iOS, and Android.");
+    log::debug!("On-device models are not supported on this platform.");
     Vec::new()
 }
