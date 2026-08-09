@@ -101,6 +101,30 @@ jobs:
       - name: Setup MSVC developer environment
         uses: ilammy/msvc-dev-cmd@v1
 
+      # Fail before the long Windows build if SSL.com signing credentials are
+      # not available to this run. GitHub substitutes absent secrets as empty
+      # strings, which otherwise surfaces only after the artifacts are built.
+      - name: Validate code-signing secrets
+        shell: pwsh
+        env:
+          ES_USERNAME: ${{ secrets.ES_USERNAME }}
+          ES_PASSWORD: ${{ secrets.ES_PASSWORD }}
+          ES_CREDENTIAL_ID: ${{ secrets.ES_CREDENTIAL_ID }}
+          ES_TOTP_SECRET: ${{ secrets.ES_TOTP_SECRET }}
+        run: |
+          $required = @(
+            "ES_USERNAME",
+            "ES_PASSWORD",
+            "ES_CREDENTIAL_ID",
+            "ES_TOTP_SECRET"
+          )
+          $missing = $required | Where-Object {
+            [string]::IsNullOrWhiteSpace([Environment]::GetEnvironmentVariable($_))
+          }
+          if ($missing.Count -gt 0) {
+            throw "Missing required GitHub Actions secret(s): $($missing -join ', '). Configure them under Settings > Secrets and variables > Actions."
+          }
+
       - name: Build App
         shell: pwsh
         run: |
@@ -114,7 +138,8 @@ jobs:
           Move-Item "${env:GITHUB_WORKSPACE}\src-tauri\target\release\bundle\nsis\*" "${env:GITHUB_WORKSPACE}\src-tauri\target\release\bundle\to-sign\" -Force
 
       - name: Sign Artifact with CodeSignTool
-        uses: sslcom/esigner-codesign@develop
+        uses: sslcom/esigner-codesign@v1.3.2
+        timeout-minutes: 20
         with:
           command: batch_sign
           username: ${{ secrets.ES_USERNAME }}
