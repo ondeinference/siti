@@ -9,14 +9,14 @@ All source code in this repository.
 
 ## What it does NOT cover
 
-The following are trademarks and proprietary assets of **Splitfire AB**, and are
+The following are trademarks and proprietary assets of **PT Sigit Mitra Bangun**, and are
 **not** granted under the code license (see Apache-2.0 §6, "Trademarks"):
 
 - The names **"Siti"** and **"Siti AI"**
 - The Siti logos, wordmarks, and app icons (e.g. `assets/app-icon.png`,
   `src-tauri/icons/`)
 - App Store screenshots and marketing copy under `assets/`
-- The App Store listing and developer identity (Splitfire AB)
+- The App Store listing and developer identity (PT Sigit Mitra Bangun)
 
 ## What you may do
 

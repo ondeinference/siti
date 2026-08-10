@@ -57,7 +57,7 @@ and the [Tauri prerequisites](https://tauri.app/start/prerequisites/) for your
 platform (Xcode for macOS/iOS; Android SDK + NDK for Android).
 
 ```bash
-git clone https://github.com/ondeinference/siti.git
+git clone https://github.com/getsigit/siti.git
 cd siti
 pnpm install
 make dev          # or: pnpm tauri dev
@@ -135,12 +135,13 @@ If Siti is useful to you, the engine underneath it probably is too.
 Contributions are welcome — see [CONTRIBUTING.md](CONTRIBUTING.md). We ask
 contributors to sign a lightweight [CLA](CLA.md) so the project can keep both
 its open-source and commercial licensing options open. Start with issues labeled
-[`good first issue`](https://github.com/ondeinference/siti/labels/good%20first%20issue).
+[`good first issue`](https://github.com/getsigit/siti/labels/good%20first%20issue).
 
 ## Sponsor
 
-Siti and Onde are built by a small team ([Splitfire AB](https://ondeinference.com)).
-On-device AI that keeps user data private is worth funding — if you agree,
+Siti is built by [PT Sigit Mitra Bangun](https://sigit.si) and published
+by Splitfire AB, which also builds the underlying Onde engine. On-device AI
+that keeps user data private is worth funding — if you agree,
 [**sponsor us on GitHub**](https://github.com/sponsors/ondeinference). Sponsorship
 funds the engine, the SDKs, and this app.
 
@@ -153,5 +154,5 @@ issue for security reports.
 ## License
 
 Code is licensed under [Apache-2.0](LICENSE). The "Siti AI" name, logos, and app
-icons are trademarks of Splitfire AB and are **not** covered by the code license —
+icons are trademarks of PT Sigit Mitra Bangun and are **not** covered by the code license —
 see [TRADEMARK.md](TRADEMARK.md).

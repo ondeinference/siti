@@ -8,7 +8,7 @@ appreciate responsible disclosure.
 Siti is designed so that **chat content is processed entirely on-device**:
 
 - The language model runs locally via the [Onde](https://ondeinference.com)
-  engine. Prompts and generated text are **not** sent to Splitfire AB or any
+  engine. Prompts and generated text are **not** sent to PT Sigit Mitra Bangun or any
   third party for inference.
 - Model files are downloaded from public model hosts (e.g. Hugging Face) on
   first use and cached locally. That download is the primary outbound network

@@ -18,7 +18,7 @@ done once. When you open a pull request, the CLA bot will comment with a link if
 a signature is needed.
 
 Why a CLA: Siti's code is Apache-2.0, but the project sits alongside a
-commercially licensed SDK. The CLA lets Splitfire AB keep both open-source and
+commercially licensed SDK. The CLA lets PT Sigit Mitra Bangun keep both open-source and
 commercial licensing options open while guaranteeing your contribution stays
 available under the open license.
 
