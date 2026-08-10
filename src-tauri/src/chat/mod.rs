@@ -13,6 +13,7 @@
 // ── Command submodules (one Tauri command per file) ──────────────────────────
 
 pub mod command_clear_history;
+pub mod command_download_progress;
 pub mod command_get_history;
 pub mod command_get_status;
 pub mod command_list_models;
@@ -25,6 +26,7 @@ pub mod command_unload_model;
 // ── Re-exports so lib.rs can pull in commands with a flat path ───────────────
 
 pub use command_clear_history::chat_clear_history;
+pub use command_download_progress::chat_download_progress;
 pub use command_get_history::chat_get_history;
 pub use command_get_status::chat_get_status;
 pub use command_list_models::chat_list_models;
@@ -229,8 +231,12 @@ pub(crate) fn config_for_model_id(id: &str) -> Option<GgufModelConfig> {
 // UQFF (Universal Quantized File Format) stores pre-quantised weights and loads
 // directly through mistral.rs's `UqffTextModelBuilder`, avoiding the ISQ path's
 // full-precision download + in-memory quantisation spike. onde exposes it via
-// `ChatEngine::load_uqff_model`, which is available on every inference platform
-// (macOS/iOS/Android), so — unlike Gemma ISQ — these are offered on all three.
+// `ChatEngine::load_uqff_model` on every platform its engine builds for — the
+// `q4k` shards are a GGML-family type that dequantises on CPU as well as Metal
+// — so, unlike Gemma ISQ, these are offered everywhere Siti does inference
+// (macOS/iOS/Android/Windows). Keep these `cfg`s in step with the rest of the
+// module: a narrower gate here breaks the Windows build, because
+// `resolve_model_id` and `chat_list_models` reference the table unconditionally.
 //
 // We ship the `mistralrs-community` Qwen 3 UQFF repos: each is self-contained
 // (base `config.json` + tokenizer + `residual.safetensors` + the `q4k` shard),
@@ -240,7 +246,12 @@ pub(crate) fn config_for_model_id(id: &str) -> Option<GgufModelConfig> {
 // `expected_size_bytes` counts just those, matching the on-disk footprint.
 
 /// Static metadata for a Qwen 3 UQFF model offered in Siti's model list.
-#[cfg(any(target_os = "macos", target_os = "ios", target_os = "android"))]
+#[cfg(any(
+    target_os = "macos",
+    target_os = "ios",
+    target_os = "android",
+    target_os = "windows"
+))]
 pub(crate) struct UqffModelEntry {
     /// HuggingFace repo id; also the value passed back to `chat_set_model`.
     pub id: &'static str,
@@ -259,7 +270,12 @@ pub(crate) struct UqffModelEntry {
 /// The Qwen 3 UQFF models Siti can load. Sizes are the measured
 /// `q4k-0.uqff` + `residual.safetensors` totals of each `mistralrs-community`
 /// repo (small config/tokenizer files add a negligible remainder).
-#[cfg(any(target_os = "macos", target_os = "ios", target_os = "android"))]
+#[cfg(any(
+    target_os = "macos",
+    target_os = "ios",
+    target_os = "android",
+    target_os = "windows"
+))]
 pub(crate) const UQFF_MODELS: &[UqffModelEntry] = &[
     UqffModelEntry {
         id: "mistralrs-community/Qwen3-0.6B-UQFF",
@@ -332,7 +348,12 @@ pub(crate) const UQFF_MODELS: &[UqffModelEntry] = &[
 /// Every `mistralrs-community` Qwen 3 UQFF repo names its 4-bit shard
 /// `q4k-0.uqff`; passing that single shard is enough for mistral.rs to resolve
 /// the base config, tokenizer, and residual weights.
-#[cfg(any(target_os = "macos", target_os = "ios", target_os = "android"))]
+#[cfg(any(
+    target_os = "macos",
+    target_os = "ios",
+    target_os = "android",
+    target_os = "windows"
+))]
 pub(crate) fn uqff_config_for_model_id(id: &str) -> Option<UqffModelConfig> {
     let entry = UQFF_MODELS.iter().find(|m| m.id == id)?;
     Some(UqffModelConfig {
@@ -476,19 +497,40 @@ const DOWNLOAD_COMPLETE_THRESHOLD: f64 = 0.99;
 /// Only used against the HF cache's `blobs/` directory, which holds the actual
 /// downloaded files (not the `snapshots/` symlink/hard-link views), so nothing
 /// is double-counted.
+///
+/// `include_incomplete` decides how an in-flight download is treated. hf-hub
+/// streams each blob into a sibling `<sha>.part` file and only renames it to the
+/// final blob name once the transfer completes, holding a `<sha>.lock` alongside
+/// it meanwhile. Those two answer different questions:
+///
+/// - **Completeness** (`false`) must ignore them, or a download interrupted far
+///   enough into the last file reads as finished — for a two-file UQFF model,
+///   one finished shard plus a nearly-full `.part` clears the 99% threshold
+///   while the model is still unloadable.
+/// - **Progress** (`true`) wants exactly the opposite: the `.part` file *is* the
+///   live byte count, and excluding it would peg the UI at 0% for the entire
+///   download.
 #[cfg(any(
     target_os = "macos",
     target_os = "ios",
     target_os = "android",
     target_os = "windows"
 ))]
-fn blobs_dir_size(path: &std::path::Path) -> u64 {
+fn blobs_dir_size(path: &std::path::Path, include_incomplete: bool) -> u64 {
     let mut total = 0;
     if let Ok(entries) = std::fs::read_dir(path) {
         for entry in entries.flatten() {
             let p = entry.path();
+            if !include_incomplete
+                && matches!(
+                    p.extension().and_then(|e| e.to_str()),
+                    Some("part") | Some("lock")
+                )
+            {
+                continue;
+            }
             match entry.metadata() {
-                Ok(md) if md.is_dir() => total += blobs_dir_size(&p),
+                Ok(md) if md.is_dir() => total += blobs_dir_size(&p, include_incomplete),
                 Ok(md) => total += md.len(),
                 Err(_) => {}
             }
@@ -515,10 +557,31 @@ pub(crate) fn is_model_downloaded(id: &str, expected_size_bytes: u64) -> bool {
     match onde::hf_cache::model_cache_path(id) {
         Some(root) => {
             let blobs = root.join("blobs");
-            blobs_dir_size(&blobs) as f64
+            // Completed blobs only — a `.part` still being streamed must not
+            // count towards "downloaded".
+            blobs_dir_size(&blobs, false) as f64
                 >= expected_size_bytes as f64 * DOWNLOAD_COMPLETE_THRESHOLD
         }
         None => false,
+    }
+}
+
+/// Bytes of `id`'s weights currently on disk, **including** the partially
+/// written `.part` file of an in-flight download.
+///
+/// Drives the download progress indicator in Settings. mistral.rs owns the
+/// actual transfer and only reports progress to an `indicatif` bar that goes to
+/// the log, so the cache directory is the one place the UI can observe it.
+#[cfg(any(
+    target_os = "macos",
+    target_os = "ios",
+    target_os = "android",
+    target_os = "windows"
+))]
+pub(crate) fn model_downloaded_bytes(id: &str) -> u64 {
+    match onde::hf_cache::model_cache_path(id) {
+        Some(root) => blobs_dir_size(&root.join("blobs"), true),
+        None => 0,
     }
 }
 
@@ -619,5 +682,69 @@ pub(crate) fn emit_chat_status(
     };
     if let Err(e) = app.emit(EVENT_CHAT_STATUS_CHANGED, &payload) {
         error!("Failed to emit chat status event: {:?}", e);
+    }
+}
+
+// ── Tests ────────────────────────────────────────────────────────────────────
+
+#[cfg(all(
+    test,
+    any(
+        target_os = "macos",
+        target_os = "ios",
+        target_os = "android",
+        target_os = "windows"
+    )
+))]
+mod tests {
+    use super::*;
+
+    /// A two-file model whose download died partway through the second file:
+    /// one finished blob, plus the `.part`/`.lock` pair hf-hub leaves behind
+    /// while streaming the next. Sized so the in-flight bytes land *above* the
+    /// completeness threshold and the finished bytes alone land below it, which
+    /// is precisely the case that used to report an unloadable model as ready.
+    const FIXTURE_EXPECTED_TOTAL: u64 = 2000;
+
+    fn blobs_fixture(name: &str) -> std::path::PathBuf {
+        let dir = std::env::temp_dir().join(format!("siti-blobs-{name}"));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).expect("create fixture dir");
+        std::fs::write(dir.join("aaaa"), vec![0u8; 1000]).expect("write blob");
+        std::fs::write(dir.join("bbbb.part"), vec![0u8; 990]).expect("write part");
+        std::fs::write(dir.join("bbbb.lock"), vec![0u8; 10]).expect("write lock");
+        dir
+    }
+
+    #[test]
+    fn blobs_dir_size_excludes_incomplete_downloads() {
+        let dir = blobs_fixture("complete");
+        assert_eq!(blobs_dir_size(&dir, false), 1000);
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn blobs_dir_size_counts_partial_for_progress() {
+        let dir = blobs_fixture("progress");
+        assert_eq!(blobs_dir_size(&dir, true), 2000);
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    /// The regression this guards: one finished blob plus a nearly-complete
+    /// `.part` clears the 99% threshold, so counting in-flight bytes towards
+    /// completeness reports an unloadable model as downloaded.
+    #[test]
+    fn partial_download_does_not_read_as_complete() {
+        let dir = blobs_fixture("threshold");
+        let cutoff = FIXTURE_EXPECTED_TOTAL as f64 * DOWNLOAD_COMPLETE_THRESHOLD;
+        assert!(
+            blobs_dir_size(&dir, true) as f64 >= cutoff,
+            "fixture must cross the threshold when in-flight bytes are counted"
+        );
+        assert!(
+            (blobs_dir_size(&dir, false) as f64) < cutoff,
+            "completed bytes alone must stay below the threshold"
+        );
+        let _ = std::fs::remove_dir_all(&dir);
     }
 }
