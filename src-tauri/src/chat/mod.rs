@@ -41,7 +41,12 @@ use {
     serde::{Deserialize, Serialize},
 };
 
-#[cfg(any(target_os = "macos", target_os = "ios", target_os = "android"))]
+#[cfg(any(
+    target_os = "macos",
+    target_os = "ios",
+    target_os = "android",
+    target_os = "windows"
+))]
 use {
     crate::events::{EVENT_CHAT_REPLY, EVENT_CHAT_STATUS_CHANGED},
     log::error,
@@ -125,7 +130,12 @@ pub struct ModelInfo {
 // `ChatEngine` from `onde` handles all model lifecycle, history, and inference.
 // It is `Send + Sync` and manages its own internal mutex.
 
-#[cfg(any(target_os = "macos", target_os = "ios", target_os = "android"))]
+#[cfg(any(
+    target_os = "macos",
+    target_os = "ios",
+    target_os = "android",
+    target_os = "windows"
+))]
 pub(crate) static ENGINE: Lazy<ChatEngine> = Lazy::new(ChatEngine::new);
 
 // ── Model selection & configuration ──────────────────────────────────────────
@@ -135,19 +145,29 @@ pub(crate) static ENGINE: Lazy<ChatEngine> = Lazy::new(ChatEngine::new);
 // config and the sampling config. When nothing has been chosen yet, Siti
 // falls back to a general-purpose chat model appropriate for the platform:
 //   - iOS / Android → Qwen 2.5 1.5B (~941 MB, fits mobile memory budgets)
-//   - macOS         → Qwen 2.5 3B   (~1.93 GB, more headroom on desktop)
+//   - macOS/Windows → Qwen 2.5 3B   (~1.93 GB, more headroom on desktop)
 //
 // `config_for_model_id` handles per-platform details (e.g. `tok_model_id` on
-// Android) via the onde `GgufModelConfig` constructors.
+// mobile) via the onde `GgufModelConfig` constructors.
 
 /// The model id currently selected for Siti. Defaults to the platform-
 /// appropriate general chat model; updated by `chat_set_model`.
-#[cfg(any(target_os = "macos", target_os = "ios", target_os = "android"))]
+#[cfg(any(
+    target_os = "macos",
+    target_os = "ios",
+    target_os = "android",
+    target_os = "windows"
+))]
 pub(crate) static SELECTED_MODEL: Lazy<std::sync::Mutex<String>> =
     Lazy::new(|| std::sync::Mutex::new(siti_default_config().model_id));
 
 /// Siti's default general-purpose chat model for the current platform.
-#[cfg(any(target_os = "macos", target_os = "ios", target_os = "android"))]
+#[cfg(any(
+    target_os = "macos",
+    target_os = "ios",
+    target_os = "android",
+    target_os = "windows"
+))]
 pub(crate) fn siti_default_config() -> GgufModelConfig {
     if cfg!(any(target_os = "ios", target_os = "android")) {
         GgufModelConfig::qwen25_1_5b()
@@ -158,7 +178,12 @@ pub(crate) fn siti_default_config() -> GgufModelConfig {
 
 /// Map a HuggingFace repo id to a loadable [`GgufModelConfig`], or `None` if
 /// the id is not a model the onde engine knows how to load.
-#[cfg(any(target_os = "macos", target_os = "ios", target_os = "android"))]
+#[cfg(any(
+    target_os = "macos",
+    target_os = "ios",
+    target_os = "android",
+    target_os = "windows"
+))]
 pub(crate) fn config_for_model_id(id: &str) -> Option<GgufModelConfig> {
     use crate::inference::models as m;
     let cfg = if id == m::BARTOWSKI_QWEN25_0_5B_INSTRUCT_GGUF {
@@ -356,7 +381,12 @@ pub(crate) fn gemma2_2b_isq_config() -> IsqModelConfig {
 /// A model selection resolved to the concrete engine config and load path it
 /// needs. Most models are GGUF; Qwen 3 UQFF models use the UQFF path (all
 /// platforms), and Gemma is the sole ISQ model (macOS only).
-#[cfg(any(target_os = "macos", target_os = "ios", target_os = "android"))]
+#[cfg(any(
+    target_os = "macos",
+    target_os = "ios",
+    target_os = "android",
+    target_os = "windows"
+))]
 pub(crate) enum ResolvedModel {
     Gguf(GgufModelConfig),
     Uqff(UqffModelConfig),
@@ -364,7 +394,12 @@ pub(crate) enum ResolvedModel {
     Isq(IsqModelConfig),
 }
 
-#[cfg(any(target_os = "macos", target_os = "ios", target_os = "android"))]
+#[cfg(any(
+    target_os = "macos",
+    target_os = "ios",
+    target_os = "android",
+    target_os = "windows"
+))]
 impl ResolvedModel {
     /// Human-friendly display name for the resolved model.
     pub(crate) fn display_name(&self) -> String {
@@ -394,7 +429,12 @@ impl ResolvedModel {
 
 /// Resolve a HuggingFace repo id to a loadable [`ResolvedModel`], or `None` if
 /// the id is not a model Siti can load on this platform.
-#[cfg(any(target_os = "macos", target_os = "ios", target_os = "android"))]
+#[cfg(any(
+    target_os = "macos",
+    target_os = "ios",
+    target_os = "android",
+    target_os = "windows"
+))]
 pub(crate) fn resolve_model_id(id: &str) -> Option<ResolvedModel> {
     #[cfg(target_os = "macos")]
     if id == GEMMA2_2B_IT_ISQ_ID {
@@ -408,7 +448,12 @@ pub(crate) fn resolve_model_id(id: &str) -> Option<ResolvedModel> {
 
 /// Return the resolved model (GGUF or ISQ) for the current selection, falling
 /// back to the platform-default GGUF model if the selection is unknown.
-#[cfg(any(target_os = "macos", target_os = "ios", target_os = "android"))]
+#[cfg(any(
+    target_os = "macos",
+    target_os = "ios",
+    target_os = "android",
+    target_os = "windows"
+))]
 pub(crate) fn resolved_model_config() -> ResolvedModel {
     let id = SELECTED_MODEL.lock().map(|g| g.clone()).unwrap_or_default();
     resolve_model_id(&id).unwrap_or_else(|| ResolvedModel::Gguf(siti_default_config()))
@@ -418,7 +463,12 @@ pub(crate) fn resolved_model_config() -> ResolvedModel {
 
 /// Fraction of `expected_size_bytes` that must be present on disk for a model
 /// to count as fully downloaded (mirrors onde's own completeness threshold).
-#[cfg(any(target_os = "macos", target_os = "ios", target_os = "android"))]
+#[cfg(any(
+    target_os = "macos",
+    target_os = "ios",
+    target_os = "android",
+    target_os = "windows"
+))]
 const DOWNLOAD_COMPLETE_THRESHOLD: f64 = 0.99;
 
 /// Sum the byte size of every real file directly and recursively under `path`.
@@ -426,7 +476,12 @@ const DOWNLOAD_COMPLETE_THRESHOLD: f64 = 0.99;
 /// Only used against the HF cache's `blobs/` directory, which holds the actual
 /// downloaded files (not the `snapshots/` symlink/hard-link views), so nothing
 /// is double-counted.
-#[cfg(any(target_os = "macos", target_os = "ios", target_os = "android"))]
+#[cfg(any(
+    target_os = "macos",
+    target_os = "ios",
+    target_os = "android",
+    target_os = "windows"
+))]
 fn blobs_dir_size(path: &std::path::Path) -> u64 {
     let mut total = 0;
     if let Ok(entries) = std::fs::read_dir(path) {
@@ -447,7 +502,12 @@ fn blobs_dir_size(path: &std::path::Path) -> u64 {
 /// A model counts as downloaded when its cache `blobs/` directory holds at
 /// least [`DOWNLOAD_COMPLETE_THRESHOLD`] of the model's expected size, which
 /// excludes partial/interrupted downloads.
-#[cfg(any(target_os = "macos", target_os = "ios", target_os = "android"))]
+#[cfg(any(
+    target_os = "macos",
+    target_os = "ios",
+    target_os = "android",
+    target_os = "windows"
+))]
 pub(crate) fn is_model_downloaded(id: &str, expected_size_bytes: u64) -> bool {
     if expected_size_bytes == 0 {
         return false;
@@ -469,7 +529,12 @@ pub(crate) fn is_model_downloaded(id: &str, expected_size_bytes: u64) -> bool {
 /// larger `max_tokens` budget because their `<think>…</think>` block can
 /// consume hundreds of tokens before the visible reply begins, and too small
 /// a budget yields empty replies.
-#[cfg(any(target_os = "macos", target_os = "ios", target_os = "android"))]
+#[cfg(any(
+    target_os = "macos",
+    target_os = "ios",
+    target_os = "android",
+    target_os = "windows"
+))]
 pub(crate) fn sampling_config() -> SamplingConfig {
     let id = SELECTED_MODEL.lock().map(|g| g.clone()).unwrap_or_default();
     let is_qwen3 = id.contains("Qwen3") || id.contains("Qwen_Qwen3");
@@ -500,7 +565,12 @@ pub(crate) fn sampling_config() -> SamplingConfig {
 }
 
 /// Default system prompt for Siti, the private on-device personal assistant.
-#[cfg(any(target_os = "macos", target_os = "ios", target_os = "android"))]
+#[cfg(any(
+    target_os = "macos",
+    target_os = "ios",
+    target_os = "android",
+    target_os = "windows"
+))]
 pub(crate) const CHAT_SYSTEM_PROMPT: &str = r#"You are Siti, a friendly and capable personal assistant that runs entirely on the user's device. Nothing the user says ever leaves the device.
 
 You help with everyday things: answering questions, brainstorming, drafting and editing text, summarising, explaining ideas in plain terms, and planning.
@@ -512,7 +582,12 @@ You run locally, so you may not know about very recent events. When you are not 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
 /// Format a `Duration` as `Xm Ys` or just `Ys` when under a minute.
-#[cfg(any(target_os = "macos", target_os = "ios", target_os = "android"))]
+#[cfg(any(
+    target_os = "macos",
+    target_os = "ios",
+    target_os = "android",
+    target_os = "windows"
+))]
 pub(crate) fn fmt_duration(d: std::time::Duration) -> String {
     let total_secs = d.as_secs_f64();
     let mins = (total_secs / 60.0).floor() as u64;
@@ -525,7 +600,12 @@ pub(crate) fn fmt_duration(d: std::time::Duration) -> String {
 }
 
 /// Emit a chat status event to the frontend.
-#[cfg(any(target_os = "macos", target_os = "ios", target_os = "android"))]
+#[cfg(any(
+    target_os = "macos",
+    target_os = "ios",
+    target_os = "android",
+    target_os = "windows"
+))]
 pub(crate) fn emit_chat_status(
     app: &AppHandle,
     status: ChatStatus,

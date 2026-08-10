@@ -4,11 +4,21 @@
 
 use log::debug;
 
-#[cfg(any(target_os = "macos", target_os = "ios", target_os = "android"))]
+#[cfg(any(
+    target_os = "macos",
+    target_os = "ios",
+    target_os = "android",
+    target_os = "windows"
+))]
 use {super::ENGINE, log::info};
 
 /// Clear the conversation history but keep the model loaded.
-#[cfg(any(target_os = "macos", target_os = "ios", target_os = "android"))]
+#[cfg(any(
+    target_os = "macos",
+    target_os = "ios",
+    target_os = "android",
+    target_os = "windows"
+))]
 #[tauri::command]
 pub async fn chat_clear_history() -> Result<String, String> {
     if ENGINE.is_loaded().await {
@@ -22,9 +32,14 @@ pub async fn chat_clear_history() -> Result<String, String> {
     }
 }
 
-#[cfg(not(any(target_os = "macos", target_os = "ios", target_os = "android")))]
+#[cfg(not(any(
+    target_os = "macos",
+    target_os = "ios",
+    target_os = "android",
+    target_os = "windows"
+)))]
 #[tauri::command]
 pub async fn chat_clear_history() -> Result<String, String> {
-    debug!("Siti chat is only supported on macOS, iOS, and Android for now.");
+    debug!("Siti chat is not supported on this platform.");
     Ok("No chat model loaded.".to_string())
 }

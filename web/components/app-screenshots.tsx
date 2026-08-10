@@ -7,7 +7,7 @@ type Shot = {
   src: string;
   alt: string;
   caption: string;
-  device: "phone" | "tablet";
+  device: "phone" | "tablet" | "desktop";
   width: number;
   height: number;
 };
@@ -45,6 +45,46 @@ const slides: Shot[] = [
     width: 2064,
     height: 2752,
   },
+  {
+    src: "/screenshots/windows-chat.png",
+    alt: "Siti AI chat running on Windows",
+    caption: "Now on Windows",
+    device: "desktop",
+    width: 1920,
+    height: 1080,
+  },
+  {
+    src: "/screenshots/windows-private.png",
+    alt: "Siti AI private, on-device settings on Windows",
+    caption: "Private on your PC",
+    device: "desktop",
+    width: 1920,
+    height: 1080,
+  },
+  {
+    src: "/screenshots/windows-draft.png",
+    alt: "Siti AI drafting and summarizing on Windows",
+    caption: "Draft and summarize",
+    device: "desktop",
+    width: 1920,
+    height: 1080,
+  },
+  {
+    src: "/screenshots/windows-offline.png",
+    alt: "Siti AI working offline on Windows",
+    caption: "Works offline",
+    device: "desktop",
+    width: 1920,
+    height: 1080,
+  },
+  {
+    src: "/screenshots/windows-model.png",
+    alt: "Siti AI on-device model picker on Windows",
+    caption: "Choose your model",
+    device: "desktop",
+    width: 1920,
+    height: 1080,
+  },
 ];
 
 const AUTOPLAY_MS = 5000;
@@ -80,6 +120,11 @@ export function AppScreenshots() {
   const prev = useCallback(() => goTo(index - 1), [goTo, index]);
   const next = useCallback(() => goTo(index + 1), [goTo, index]);
 
+  // The stage frame is sized per the active slide: portrait phone/tablet
+  // shots want a tall narrow box, landscape desktop shots want a wide
+  // short one, so both fill the frame without letterboxing or clipping.
+  const isDesktop = slides[index].device === "desktop";
+
   // Auto-advance, paused on hover/focus and when the user prefers reduced motion.
   useEffect(() => {
     if (paused) return;
@@ -112,8 +157,8 @@ export function AppScreenshots() {
           Private by design, on every device.
         </h2>
         <p className="mx-auto mt-4 max-w-xl text-muted">
-          The same assistant on iPhone and iPad. Your model runs locally and your
-          chats never leave the device.
+          The same assistant on iPhone, iPad, and Windows. Your model runs
+          locally and your chats never leave the device.
         </p>
       </div>
 
@@ -141,10 +186,15 @@ export function AppScreenshots() {
             <Arrow dir="left" />
           </button>
 
-          {/* Stage: a fixed-height frame so slides of different aspect ratios
-              swap without the layout jumping. */}
+          {/* Stage: a fixed-height frame so slides of the same orientation
+              swap without the layout jumping. Widens and flattens for the
+              landscape Windows shots instead of letterboxing them. */}
           <div
-            className="relative h-[460px] w-full max-w-md overflow-hidden sm:h-[600px]"
+            className={`relative w-full overflow-hidden transition-[max-width] duration-300 ${
+              isDesktop
+                ? "h-[220px] max-w-2xl sm:h-[400px]"
+                : "h-[460px] max-w-md sm:h-[600px]"
+            }`}
             onTouchStart={onTouchStart}
             onTouchEnd={onTouchEnd}
           >
@@ -162,7 +212,14 @@ export function AppScreenshots() {
                 >
                   <div
                     className="flex min-h-0 flex-1 items-center justify-center"
-                    style={{ maxWidth: shot.device === "phone" ? 260 : 420 }}
+                    style={{
+                      maxWidth:
+                        shot.device === "phone"
+                          ? 260
+                          : shot.device === "tablet"
+                            ? 420
+                            : 640,
+                    }}
                   >
                     <Image
                       src={shot.src}

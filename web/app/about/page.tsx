@@ -21,13 +21,13 @@ export default function AboutPage() {
           that up.
         </p>
         <p>
-          Most assistants send everything you type to a remote server. Siti is
+          Most assistants send everything you type to a remote server. Siti AI is
           designed to keep your data on your device instead. The name is a wink
           at the assistant you already know, rebuilt around privacy.
         </p>
         <p>
-          Siti is a sibling project to{" "}
-          <a
+          Siti AI is published by <a href="https://5mb.app" target="_blank" rel="noopener noreferrer" className="font-medium text-brand underline decoration-brand/30 underline-offset-2 transition-colors hover:decoration-brand">Splitfire AB</a> which publishes
+          {" "}<a
             href="https://apps.apple.com/se/app/rumi-learn-persian/id6753832408?l=en-GB"
             target="_blank"
             rel="noopener noreferrer"
@@ -43,9 +43,8 @@ export default function AboutPage() {
             className="font-medium text-brand underline decoration-brand/30 underline-offset-2 transition-colors hover:decoration-brand"
           >
             smbCloud MailX
-          </a>
-          , and they share the same focus: careful, on-device apps for Apple
-          platforms. We are a small team, and we sweat the details.
+          </a> among others, and they share the same focus: careful, on-device apps for Apple
+          platforms.
         </p>
       </div>
     </article>

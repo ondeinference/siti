@@ -2,10 +2,10 @@
 name = "sitiai"
 version = "1.0.0"
 description = "Siti AI — private, on-device personal assistant."
-authors = ["Splitfire AB <support@getsiti.5mb.app>"]
+authors = ["PT Sigit Mitra Bangun <support@getsiti.5mb.app>"]
 edition = "2021"
 license = "Apache-2.0"
-repository = "https://github.com/ondeinference/siti"
+repository = "https://github.com/getsigit/siti"
 homepage = "https://getsiti.5mb.app"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html

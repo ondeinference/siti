@@ -49,6 +49,7 @@ keystore.properties
 .env.*
 !.env.example
 !.env.appstore.example
+!.env.playstore.example
 
 # Local Apple signing configs — contain cert SHA-1 identities and local
 # provisioning-profile paths. Copy the .example files, fill in your own, and

@@ -7,7 +7,12 @@
 
 use tauri::AppHandle;
 
-#[cfg(any(target_os = "macos", target_os = "ios", target_os = "android"))]
+#[cfg(any(
+    target_os = "macos",
+    target_os = "ios",
+    target_os = "android",
+    target_os = "windows"
+))]
 use {
     super::{
         emit_chat_status, fmt_duration, resolved_model_config, sampling_config, CHAT_SYSTEM_PROMPT,
@@ -17,7 +22,12 @@ use {
 };
 
 /// Load the platform-default chat model into memory.
-#[cfg(any(target_os = "macos", target_os = "ios", target_os = "android"))]
+#[cfg(any(
+    target_os = "macos",
+    target_os = "ios",
+    target_os = "android",
+    target_os = "windows"
+))]
 #[tauri::command]
 pub async fn chat_load_model(app: AppHandle) -> Result<String, String> {
     let config = resolved_model_config();
@@ -48,9 +58,14 @@ pub async fn chat_load_model(app: AppHandle) -> Result<String, String> {
     Ok(msg)
 }
 
-#[cfg(not(any(target_os = "macos", target_os = "ios", target_os = "android")))]
+#[cfg(not(any(
+    target_os = "macos",
+    target_os = "ios",
+    target_os = "android",
+    target_os = "windows"
+)))]
 #[tauri::command]
 pub async fn chat_load_model(_app: AppHandle) -> Result<String, String> {
-    log::debug!("Chat model is only supported on macOS, iOS, and Android for now.");
-    Err("Chat model is only supported on macOS, iOS, and Android for now.".to_string())
+    log::debug!("Chat model is not supported on this platform.");
+    Err("Chat model is not supported on this platform.".to_string())
 }

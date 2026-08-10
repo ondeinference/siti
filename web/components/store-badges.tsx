@@ -1,7 +1,7 @@
 import Image from "next/image";
 
 /**
- * Official App Store and Play Store badges.
+ * Official App Store, Play Store and Microsoft Store badges.
  * Links to download Siti AI from each platform.
  */
 
@@ -36,6 +36,22 @@ export function StoreBadges() {
           alt="Get it on Google Play"
           width={135}
           height={40}
+          className="h-10 w-auto sm:h-[50px]"
+        />
+      </a>
+
+      <a
+        href="https://apps.microsoft.com/detail/9p6tjltzg6mk"
+        target="_blank"
+        rel="noopener noreferrer"
+        className="inline-block transition-transform hover:scale-105 hover:opacity-90"
+        aria-label="Get it from Microsoft Store"
+      >
+        <Image
+          src="/images/Get_it_from_Microsoft_Store_Badge_en-US_dark.svg"
+          alt="Get it from Microsoft Store"
+          width={161}
+          height={44}
           className="h-10 w-auto sm:h-[50px]"
         />
       </a>

@@ -6,18 +6,19 @@ on:
       - release/windows-microsoft-store
   workflow_dispatch:
 
-# Push to the release branch above to build and draft-release the Windows
-# Microsoft Store artifacts. The .msi/.exe are for direct download; the MSIX is
-# what gets submitted to Partner Center (the Store re-signs it), which is the
-# only form that carries the package identity Store services need.
+# Push to the release branch above to build, sign, and draft-release the
+# Windows Microsoft Store artifacts. The signed .msi/.exe are for direct
+# download; the MSIX is what gets submitted to Partner Center (the Store
+# re-signs it), which is the only form that carries the package identity Store
+# services need.
 jobs:
   publish-tauri:
     permissions:
       contents: write
     runs-on: windows-latest
-    # Job-level env so the MSIX steps' own `if:` conditions can read these — a
-    # step-level env is not in scope for that same step's `if`. When the secrets
-    # are absent the MSIX steps skip and the unsigned .msi/.exe still ship.
+    # Job-level env so the MSIX steps' own `if:` conditions can read these.
+    # When the MSIX identity secrets are absent the MSIX steps skip and the
+    # signed .msi/.exe still ship.
     env:
       MSIX_PUBLISHER: ${{ secrets.MSIX_PUBLISHER }}
       MSIX_IDENTITY_NAME: ${{ secrets.MSIX_IDENTITY_NAME }}
@@ -44,6 +45,12 @@ jobs:
         uses: Swatinem/rust-cache@v2
         with:
           workspaces: src-tauri
+
+      # The enabled Windows chat backend pulls in native crypto/C dependencies.
+      # NASM keeps their x64 assembly path available on the Windows runner.
+      - name: Install NASM
+        run: choco install nasm -y --no-progress
+        shell: pwsh
 
       # Validate the MSIX manifest before the long Rust build rather than after
       # it. makeappx checks the manifest against its schema regardless of what
@@ -94,9 +101,57 @@ jobs:
       - name: Setup MSVC developer environment
         uses: ilammy/msvc-dev-cmd@v1
 
+      # Fail before the long Windows build if SSL.com signing credentials are
+      # not available to this run. GitHub substitutes absent secrets as empty
+      # strings, which otherwise surfaces only after the artifacts are built.
+      - name: Validate code-signing secrets
+        shell: pwsh
+        env:
+          ES_USERNAME: ${{ secrets.ES_USERNAME }}
+          ES_PASSWORD: ${{ secrets.ES_PASSWORD }}
+          ES_CREDENTIAL_ID: ${{ secrets.ES_CREDENTIAL_ID }}
+          ES_TOTP_SECRET: ${{ secrets.ES_TOTP_SECRET }}
+        run: |
+          $required = @(
+            "ES_USERNAME",
+            "ES_PASSWORD",
+            "ES_CREDENTIAL_ID",
+            "ES_TOTP_SECRET"
+          )
+          $missing = $required | Where-Object {
+            [string]::IsNullOrWhiteSpace([Environment]::GetEnvironmentVariable($_))
+          }
+          if ($missing.Count -gt 0) {
+            throw "Missing required GitHub Actions secret(s): $($missing -join ', '). Configure them under Settings > Secrets and variables > Actions."
+          }
+
       - name: Build App
         shell: pwsh
-        run: pnpm tauri build -c src-tauri/tauri.prod-windows-microsoftstore.conf.json
+        run: |
+          pnpm tauri build -c src-tauri/tauri.prod-windows-microsoftstore.conf.json
+          # Move installer artifacts to a dedicated input directory for
+          # CodeSignTool. The MSIX is packed separately below and deliberately
+          # left unsigned for Partner Center.
+          mkdir "${env:GITHUB_WORKSPACE}\src-tauri\target\release\bundle\to-sign"
+          mkdir "${env:GITHUB_WORKSPACE}\src-tauri\target\release\bundle\signed"
+          Move-Item "${env:GITHUB_WORKSPACE}\src-tauri\target\release\bundle\msi\*" "${env:GITHUB_WORKSPACE}\src-tauri\target\release\bundle\to-sign\" -Force
+          Move-Item "${env:GITHUB_WORKSPACE}\src-tauri\target\release\bundle\nsis\*" "${env:GITHUB_WORKSPACE}\src-tauri\target\release\bundle\to-sign\" -Force
+
+      - name: Sign Artifact with CodeSignTool
+        uses: sslcom/esigner-codesign@v1.3.2
+        timeout-minutes: 20
+        with:
+          command: batch_sign
+          username: ${{ secrets.ES_USERNAME }}
+          password: ${{ secrets.ES_PASSWORD }}
+          credential_id: ${{ secrets.ES_CREDENTIAL_ID }}
+          totp_secret: ${{ secrets.ES_TOTP_SECRET }}
+          dir_path: ${GITHUB_WORKSPACE}\src-tauri\target\release\bundle\to-sign
+          output_path: ${GITHUB_WORKSPACE}\src-tauri\target\release\bundle\signed
+          malware_block: false
+          clean_logs: true
+          jvm_max_memory: 1024M
+          signing_method: v1
 
       # The .msi/.exe above are for direct download only. A Store MSI/EXE
       # submission is just a hosted installer URL, so it never gets package
@@ -119,11 +174,12 @@ jobs:
       - name: Release
         uses: softprops/action-gh-release@v2
         with:
+          tag_name: "windows-microsoft-store-siti-ai-v${{ env.VERSION }}"
           draft: true
           prerelease: false
           body: "See the assets to download this version and install."
           name: "Siti AI v${{ env.VERSION }} (Windows Microsoft Store)"
           files: |
-            src-tauri/target/release/bundle/msi/*.msi
-            src-tauri/target/release/bundle/nsis/*.exe
+            src-tauri/target/release/bundle/signed/*.msi
+            src-tauri/target/release/bundle/signed/*.exe
             src-tauri/target/release/bundle/msix/*.msix

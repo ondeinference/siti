@@ -2,7 +2,8 @@ import Link from "next/link";
 
 const links = [
   { href: "/about", label: "About" },
-  { href: "https://github.com/ondeinference/siti", label: "GitHub", external: true },
+  { href: "https://github.com/getsigit/siti", label: "GitHub", external: true },
+  { href: "https://www.reddit.com/r/SitiAI/", label: "Reddit", external: true }
 ];
 
 export function SiteNav() {
@@ -19,14 +20,14 @@ export function SiteNav() {
           {links.map((link) => (
             <li key={link.href}>
               {link.external ? (
-                <a
+                <Link
                   href={link.href}
-                  target="_blank"
+                  target="__blank"
                   rel="noopener noreferrer"
                   className="transition-colors hover:text-ink"
                 >
                   {link.label}
-                </a>
+                </Link>
               ) : (
                 <Link
                   href={link.href}
