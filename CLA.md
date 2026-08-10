@@ -1,7 +1,7 @@
 # Contributor License Agreement
 
 Thank you for your interest in contributing to Siti AI ("the Project"),
-maintained by **Splitfire AB** ("we", "us").
+maintained by **PT Sigit Mitra Bangun** ("we", "us").
 
 This Contributor License Agreement ("Agreement") clarifies the intellectual
 property license granted with Contributions from any person or entity. By
@@ -24,13 +24,13 @@ Individual Contributor License Agreement and is intended to be simple and fair.
 
 ## 2. Copyright license
 
-You grant to Splitfire AB and to recipients of software distributed by the
+You grant to PT Sigit Mitra Bangun and to recipients of software distributed by the
 Project a perpetual, worldwide, non-exclusive, no-charge, royalty-free,
 irrevocable copyright license to reproduce, prepare derivative works of,
 publicly display, publicly perform, sublicense, and distribute Your
 Contributions and such derivative works.
 
-This license includes the right for Splitfire AB to license the Contribution,
+This license includes the right for PT Sigit Mitra Bangun to license the Contribution,
 including under the Project's open-source license
 ([Apache-2.0](LICENSE)) **and** under separate commercial terms. You retain all
 right, title, and interest in Your Contributions; this Agreement is a license,
@@ -38,7 +38,7 @@ not an assignment.
 
 ## 3. Patent license
 
-You grant to Splitfire AB and to recipients of the Project a perpetual,
+You grant to PT Sigit Mitra Bangun and to recipients of the Project a perpetual,
 worldwide, non-exclusive, no-charge, royalty-free, irrevocable (except as stated
 in this section) patent license to make, have made, use, offer to sell, sell,
 import, and otherwise transfer Your Contribution, where such license applies

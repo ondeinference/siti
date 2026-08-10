@@ -12,8 +12,8 @@ const features = [
     body: "Open the app and start typing. There's no sign-up to get through, and nothing about your questions is stored in the cloud.",
   },
   {
-    title: "Built for macOS and iOS",
-    body: "It's a native app on both, so it behaves the way the rest of your Apple devices already do.",
+    title: "Native on Apple and Windows",
+    body: "A native app on macOS, iOS, and Windows, so it behaves the way the rest of your devices already do.",
   },
 ];
 
@@ -29,8 +29,9 @@ export default function HomePage() {
           <span className="text-brand">entirely on your device.</span>
         </h1>
         <p className="mx-auto mt-6 max-w-2xl text-lg text-muted">
-          Siti runs on your iPhone, iPad, and Mac. Ask it anything, and your
-          conversations stay with you instead of on someone else&apos;s servers.
+          Siti runs on your iPhone, iPad, Mac, and Windows PC. Ask it
+          anything, and your conversations stay with you instead of on
+          someone else&apos;s servers.
         </p>
         <div className="mt-10 flex flex-col items-center justify-center gap-6">
           <StoreBadges />

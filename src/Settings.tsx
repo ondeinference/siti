@@ -254,10 +254,10 @@ export default function Settings({
               <span className="row-label">GitHub</span>
               <a
                 className="row-value row-link"
-                href="https://github.com/ondeinference/sitiai"
-                onClick={handleOpenUrl("https://github.com/ondeinference/sitiai")}
+                href="https://github.com/getsigit/siti"
+                onClick={handleOpenUrl("https://github.com/getsigit/siti")}
               >
-                ondeinference/sitiai
+                getsigit/siti
               </a>
             </div>
             <div className="settings-row">

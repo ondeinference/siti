@@ -13,9 +13,10 @@
   Center shows under Product identity for this app, character for character,
   or the Store rejects the upload.
 
-  Siti AI is a Splitfire AB product (see NOTICE), so Publisher (CN=...) and
-  PublisherDisplayName come from the same Partner Center account as the other
-  Splitfire AB apps. Only the Identity Name below is unique to Siti AI's product.
+  Siti AI is developed by PT Sigit Mitra Bangun and published by Splitfire AB
+  (see NOTICE), so Publisher (CN=...) and PublisherDisplayName come from the
+  same Partner Center account as the other Splitfire AB apps. Only the
+  Identity Name below is unique to Siti AI's product.
 -->
 <Package
   xmlns="http://schemas.microsoft.com/appx/manifest/foundation/windows10"
