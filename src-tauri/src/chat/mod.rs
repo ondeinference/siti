@@ -238,11 +238,23 @@ pub(crate) fn config_for_model_id(id: &str) -> Option<GgufModelConfig> {
 // module: a narrower gate here breaks the Windows build, because
 // `resolve_model_id` and `chat_list_models` reference the table unconditionally.
 //
-// We ship the `mistralrs-community` Qwen 3 UQFF repos: each is self-contained
-// (base `config.json` + tokenizer + `residual.safetensors` + the `q4k` shard),
-// ungated, and in current (post-1.0) UQFF format. `Qwen3ForCausalLM` is a text
-// architecture the UQFF text loader supports, so they load and generate. Only
-// the `q4k-0.uqff` shard (plus the small residual) is downloaded per model, so
+// We ship the `mistralrs-community` Qwen 3 UQFF repos that use a *text*
+// architecture the UQFF text loader (`UqffTextModelBuilder` /
+// `NormalLoaderType`) actually supports: `Qwen3ForCausalLM` (dense) and
+// `Qwen3MoeForCausalLM` (the 30B-A3B mixture-of-experts family, including its
+// Coder variant). Deliberately excluded, even though the repos exist under
+// `mistralrs-community`: `Qwen3.5`/`Qwen3.6` (`Qwen3_5(Moe)ForConditionalGeneration`)
+// and `Qwen3-VL` (`Qwen3VL(Moe)ForConditionalGeneration`) route through
+// mistral.rs's *multimodal* loader, which the text-only UQFF builder can't
+// reach; `Qwen3-Embedding` is non-generative; `Qwen3Guard-Gen` emits safety
+// labels rather than a chat reply; and `-Base` variants are not
+// instruction-tuned, so they're a poor fit for Siti's chat UI even though
+// they do carry a chat template and would technically load.
+//
+// Each repo is self-contained (base `config.json` + tokenizer +
+// `residual.safetensors` + the `q4k` shard), ungated, and in current
+// (post-1.0) UQFF format, so they load and generate. Only the `q4k-0.uqff`
+// shard (plus the small residual) is downloaded per model, so
 // `expected_size_bytes` counts just those, matching the on-disk footprint.
 
 /// Static metadata for a Qwen 3 UQFF model offered in Siti's model list.
@@ -265,6 +277,10 @@ pub(crate) struct UqffModelEntry {
     pub description: &'static str,
     /// Approximate on-disk download size (the `q4k` shard + `residual`) in bytes.
     pub expected_size_bytes: u64,
+    /// Restrict this entry to macOS/Windows. Set for ~40+ GB downloads that
+    /// cannot realistically fit an iOS/Android device's storage or memory
+    /// budget; `chat_list_models` filters these out on mobile platforms.
+    pub desktop_only: bool,
 }
 
 /// The Qwen 3 UQFF models Siti can load. Sizes are the measured
@@ -285,6 +301,7 @@ pub(crate) const UQFF_MODELS: &[UqffModelEntry] = &[
         description: "Qwen 3 0.6B, pre-quantised to 4-bit (UQFF Q4K). Loads directly with no \
                       on-device quantisation step; the lightest UQFF option.",
         expected_size_bytes: 646_635_509,
+        desktop_only: false,
     },
     UqffModelEntry {
         id: "mistralrs-community/Qwen3-1.7B-UQFF",
@@ -294,6 +311,7 @@ pub(crate) const UQFF_MODELS: &[UqffModelEntry] = &[
         description: "Qwen 3 1.7B, pre-quantised to 4-bit (UQFF Q4K). Loads directly with no \
                       on-device quantisation step.",
         expected_size_bytes: 1_590_429_781,
+        desktop_only: false,
     },
     UqffModelEntry {
         id: "mistralrs-community/Qwen3-4B-UQFF",
@@ -303,6 +321,7 @@ pub(crate) const UQFF_MODELS: &[UqffModelEntry] = &[
         description: "Qwen 3 4B, pre-quantised to 4-bit (UQFF Q4K). Loads directly with no \
                       on-device quantisation step.",
         expected_size_bytes: 3_040_959_629,
+        desktop_only: false,
     },
     UqffModelEntry {
         id: "mistralrs-community/Qwen3-4B-Instruct-2507-UQFF",
@@ -312,6 +331,7 @@ pub(crate) const UQFF_MODELS: &[UqffModelEntry] = &[
         description: "Qwen 3 4B Instruct (2507 refresh), pre-quantised to 4-bit (UQFF Q4K). \
                       A non-thinking instruct model that loads directly.",
         expected_size_bytes: 3_040_959_629,
+        desktop_only: false,
     },
     UqffModelEntry {
         id: "mistralrs-community/Qwen3-4B-Thinking-2507-UQFF",
@@ -321,6 +341,17 @@ pub(crate) const UQFF_MODELS: &[UqffModelEntry] = &[
         description: "Qwen 3 4B Thinking (2507 refresh), pre-quantised to 4-bit (UQFF Q4K). \
                       Emits a reasoning block before its reply; loads directly.",
         expected_size_bytes: 3_040_959_629,
+        desktop_only: false,
+    },
+    UqffModelEntry {
+        id: "mistralrs-community/Qwen3-4B-SafeRL-UQFF",
+        name: "Qwen 3 4B SafeRL (UQFF)",
+        display_name: "Qwen 3 4B SafeRL (UQFF Q4K)",
+        approx_memory: "~3.0 GB (UQFF Q4K)",
+        description: "Qwen 3 4B, safety-RL-tuned variant, pre-quantised to 4-bit (UQFF Q4K). \
+                      Loads directly with no on-device quantisation step.",
+        expected_size_bytes: 3_040_959_629,
+        desktop_only: false,
     },
     UqffModelEntry {
         id: "mistralrs-community/Qwen3-8B-UQFF",
@@ -330,6 +361,7 @@ pub(crate) const UQFF_MODELS: &[UqffModelEntry] = &[
         description: "Qwen 3 8B, pre-quantised to 4-bit (UQFF Q4K). Loads directly; needs \
                       roomier memory (12+ GB recommended).",
         expected_size_bytes: 5_502_458_509,
+        desktop_only: false,
     },
     UqffModelEntry {
         id: "mistralrs-community/Qwen3-14B-UQFF",
@@ -339,6 +371,97 @@ pub(crate) const UQFF_MODELS: &[UqffModelEntry] = &[
         description: "Qwen 3 14B, pre-quantised to 4-bit (UQFF Q4K). The largest UQFF option; \
                       desktop-class memory (16+ GB) recommended.",
         expected_size_bytes: 9_426_174_577,
+        desktop_only: false,
+    },
+    UqffModelEntry {
+        id: "mistralrs-community/Qwen3-32B-UQFF",
+        name: "Qwen 3 32B (UQFF)",
+        display_name: "Qwen 3 32B (UQFF Q4K)",
+        approx_memory: "~19.5 GB (UQFF Q4K)",
+        description: "Qwen 3 32B, pre-quantised to 4-bit (UQFF Q4K). Desktop-class memory \
+                      (32+ GB) recommended.",
+        expected_size_bytes: 19_548_142_977,
+        desktop_only: false,
+    },
+    UqffModelEntry {
+        id: "mistralrs-community/Qwen3-30B-A3B-UQFF",
+        name: "Qwen 3 30B-A3B (UQFF)",
+        display_name: "Qwen 3 30B-A3B (UQFF Q4K)",
+        approx_memory: "~17.6 GB (UQFF Q4K)",
+        description: "Qwen 3 30B-A3B, a mixture-of-experts model (3B active params), \
+                      pre-quantised to 4-bit (UQFF Q4K). Desktop-class memory (24+ GB) \
+                      recommended despite the small active-parameter count.",
+        expected_size_bytes: 17_640_189_769,
+        desktop_only: false,
+    },
+    UqffModelEntry {
+        id: "mistralrs-community/Qwen3-30B-A3B-Instruct-2507-UQFF",
+        name: "Qwen 3 30B-A3B Instruct 2507 (UQFF)",
+        display_name: "Qwen 3 30B-A3B Instruct 2507 (UQFF Q4K)",
+        approx_memory: "~17.6 GB (UQFF Q4K)",
+        description: "Qwen 3 30B-A3B Instruct (2507 refresh), mixture-of-experts (3B active \
+                      params), pre-quantised to 4-bit (UQFF Q4K). A non-thinking instruct \
+                      model; desktop-class memory (24+ GB) recommended.",
+        expected_size_bytes: 17_640_189_769,
+        desktop_only: false,
+    },
+    UqffModelEntry {
+        id: "mistralrs-community/Qwen3-30B-A3B-Thinking-2507-UQFF",
+        name: "Qwen 3 30B-A3B Thinking 2507 (UQFF)",
+        display_name: "Qwen 3 30B-A3B Thinking 2507 (UQFF Q4K)",
+        approx_memory: "~17.6 GB (UQFF Q4K)",
+        description: "Qwen 3 30B-A3B Thinking (2507 refresh), mixture-of-experts (3B active \
+                      params), pre-quantised to 4-bit (UQFF Q4K). Emits a reasoning block \
+                      before its reply; desktop-class memory (24+ GB) recommended.",
+        expected_size_bytes: 17_640_189_769,
+        desktop_only: false,
+    },
+    UqffModelEntry {
+        id: "mistralrs-community/Qwen3-Coder-30B-A3B-Instruct-UQFF",
+        name: "Qwen 3 Coder 30B-A3B Instruct (UQFF)",
+        display_name: "Qwen 3 Coder 30B-A3B Instruct (UQFF Q4K)",
+        approx_memory: "~17.6 GB (UQFF Q4K)",
+        description: "Qwen 3 Coder 30B-A3B Instruct, mixture-of-experts (3B active params) \
+                      coding model, pre-quantised to 4-bit (UQFF Q4K). Desktop-class memory \
+                      (24+ GB) recommended.",
+        expected_size_bytes: 17_640_189_769,
+        desktop_only: false,
+    },
+    // The following three repos are ~45 GB downloads (q4k shard + residual) —
+    // impractical for iOS/Android storage and memory budgets, so they're
+    // restricted to macOS/Windows via `desktop_only`.
+    UqffModelEntry {
+        id: "mistralrs-community/Qwen3-Coder-Next-UQFF",
+        name: "Qwen 3 Coder Next (UQFF)",
+        display_name: "Qwen 3 Coder Next (UQFF Q4K)",
+        approx_memory: "~45.3 GB (UQFF Q4K)",
+        description: "Qwen 3 Coder Next, pre-quantised to 4-bit (UQFF Q4K). The largest \
+                      coding UQFF option; desktop-class memory (64+ GB) recommended. \
+                      macOS/Windows only.",
+        expected_size_bytes: 45_338_887_469,
+        desktop_only: true,
+    },
+    UqffModelEntry {
+        id: "mistralrs-community/Qwen3-Next-80B-A3B-Instruct-UQFF",
+        name: "Qwen 3 Next 80B-A3B Instruct (UQFF)",
+        display_name: "Qwen 3 Next 80B-A3B Instruct (UQFF Q4K)",
+        approx_memory: "~45.3 GB (UQFF Q4K)",
+        description: "Qwen 3 Next 80B-A3B Instruct, mixture-of-experts (3B active params), \
+                      pre-quantised to 4-bit (UQFF Q4K). A non-thinking instruct model; \
+                      desktop-class memory (64+ GB) recommended. macOS/Windows only.",
+        expected_size_bytes: 45_338_887_469,
+        desktop_only: true,
+    },
+    UqffModelEntry {
+        id: "mistralrs-community/Qwen3-Next-80B-A3B-Thinking-UQFF",
+        name: "Qwen 3 Next 80B-A3B Thinking (UQFF)",
+        display_name: "Qwen 3 Next 80B-A3B Thinking (UQFF Q4K)",
+        approx_memory: "~45.3 GB (UQFF Q4K)",
+        description: "Qwen 3 Next 80B-A3B Thinking, mixture-of-experts (3B active params), \
+                      pre-quantised to 4-bit (UQFF Q4K). Emits a reasoning block before its \
+                      reply; desktop-class memory (64+ GB) recommended. macOS/Windows only.",
+        expected_size_bytes: 45_338_887_469,
+        desktop_only: true,
     },
 ];
 

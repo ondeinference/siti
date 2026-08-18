@@ -66,10 +66,15 @@ pub async fn chat_list_models() -> Vec<ModelInfo> {
 
     // Qwen 3 UQFF models: pre-quantised (Q4K) safetensors loaded via onde's
     // UQFF path on every inference platform. Not in onde's GGUF catalogue, so
-    // they're appended here from Siti's own `UQFF_MODELS` table.
+    // they're appended here from Siti's own `UQFF_MODELS` table. A few ~45 GB
+    // entries are marked `desktop_only` and skipped on iOS/Android, where
+    // neither the storage nor the memory budget could realistically fit them.
     {
         use super::UQFF_MODELS;
         for entry in UQFF_MODELS {
+            if entry.desktop_only && !cfg!(any(target_os = "macos", target_os = "windows")) {
+                continue;
+            }
             models.push(ModelInfo {
                 id: entry.id.to_string(),
                 name: entry.name.to_string(),
